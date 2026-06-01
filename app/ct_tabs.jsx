@@ -225,6 +225,10 @@
   function MachineLogForm({ onClose }) {
     const [scan, setScan] = useState(false);
     const [picked, setPicked] = useState(null);
+    const [trips, setTrips] = useState(0);
+    const [vol, setVol] = useState('');
+    useEffect(() => { if (picked) setVol(picked.avgTrip || parseFloat(picked.bucket) || 12); }, [picked]);
+    const totalVol = (Number(trips) || 0) * (Number(vol) || 0);
     const h0 = picked ? picked.hourNow : '';
     return (
       <>
@@ -248,6 +252,14 @@
             <Field label="Nội dung hoạt động"><input className="input" placeholder="VD: Đất đắp, San nền, Lu lèn…" /></Field>
             <Field label="Đơn vị / Khối lượng"><div style={{ display: 'flex', gap: 6 }}><input className="input mono" placeholder="Số lượng" /><select className="select" style={{ width: 80 }}><option>m³</option><option>m²</option><option>tấn</option></select></div></Field>
             <Field label="Dầu Diesel cấp (L)"><input className="input mono" placeholder="Lít" /></Field>
+          </div>
+          <div style={{ marginTop: 14, padding: 12, border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface-2)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}><Icon name="truck" size={15} style={{ color: 'var(--orange-500)' }} /><b style={{ fontSize: 12.5 }}>Khối lượng vận chuyển trong ngày</b></div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 13 }}>
+              <Field label="Số chuyến xe" hint="Tự động cộng dồn khi quét QR"><input className="input mono" type="number" value={trips} onChange={e => setTrips(e.target.value)} /></Field>
+              <Field label="Khối lượng / chuyến (m³)" hint="Tự động theo dung tích máy"><input className="input mono" value={vol} onChange={e => setVol(e.target.value)} placeholder="—" style={{ background: '#fff' }} /></Field>
+              <Field label="Tổng KL vận chuyển/ngày" hint="= số chuyến × khối lượng/chuyến"><input className="input mono" value={totalVol ? nf(totalVol, 1) + ' m³' : '—'} readOnly style={{ background: '#fff', fontWeight: 700, color: 'var(--orange-600)' }} /></Field>
+            </div>
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 14, alignItems: 'flex-end' }}>
             <Field label="Chụp ảnh chứng minh" span={1}><div className="ph" style={{ height: 64, width: 200, flexDirection: 'column', gap: 4, cursor: 'pointer' }}><Icon name="camera" size={18} /><span style={{ fontSize: 11 }}>Chụp nhanh</span></div></Field>

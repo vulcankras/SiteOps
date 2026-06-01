@@ -330,7 +330,7 @@
 
   function CTDetail({ id, go, role, initTab }) {
     const p = DB.projects.find(x => x.id === id);
-    const visTabs = TABS.filter(t => !t.roles || t.roles.includes(role));
+    const visTabs = TABS.filter(t => window.PERM ? window.PERM.canTab(role, t.id) : (!t.roles || t.roles.includes(role)));
     const [tab, setTab] = useState(initTab && visTabs.some(t => t.id === initTab) ? initTab : 'tong-quan');
     const tpl = DB.templates.find(t => t.id === p.template);
     const readOnly = role === 'watch' || role === 'pm';

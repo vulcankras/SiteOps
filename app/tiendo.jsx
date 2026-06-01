@@ -23,24 +23,50 @@
   /* ---------- S-curve ---------- */
   function SCurve() {
     const { planCum, actualCum, nowIdx } = DB.scurve;
+    const [hov, setHov] = window.React.useState(null);
+    const wrapRef = window.React.useRef(null);
     const W = 760, H = 210, pad = { l: 34, r: 14, t: 14, b: 26 };
     const x = (i) => pad.l + (i / (N - 1)) * (W - pad.l - pad.r);
     const y = (v) => pad.t + (1 - v / 100) * (H - pad.t - pad.b);
     const planPts = planCum.map((v, i) => `${x(i)},${y(v)}`).join(' ');
     const actPts = actualCum.map((v, i) => `${x(i)},${y(v)}`).join(' ');
     const actArea = `${x(0)},${y(0)} ` + actPts + ` ${x(actualCum.length - 1)},${y(0)}`;
+    const onMove = (e) => {
+      const r = wrapRef.current.getBoundingClientRect();
+      const relX = (e.clientX - r.left) / r.width * W;
+      let idx = Math.round((relX - pad.l) / (W - pad.l - pad.r) * (N - 1));
+      idx = Math.max(0, Math.min(N - 1, idx));
+      setHov(idx);
+    };
+    const hovLeftPct = hov != null ? (x(hov) / W) * 100 : 0;
     return (
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ display: 'block' }}>
-        {[0, 25, 50, 75, 100].map(g => <g key={g}><line x1={pad.l} x2={W - pad.r} y1={y(g)} y2={y(g)} stroke="var(--line-soft)" /><text x={pad.l - 6} y={y(g) + 3} fontSize="9" fill="var(--ink-400)" textAnchor="end">{g}%</text></g>)}
-        {/* now line */}
-        <line x1={x(nowIdx)} x2={x(nowIdx)} y1={pad.t} y2={H - pad.b} stroke="var(--orange-400)" strokeWidth="1" strokeDasharray="3 3" />
-        <text x={x(nowIdx)} y={pad.t - 3} fontSize="9" fill="var(--orange-600)" textAnchor="middle" fontWeight="700">Hôm nay</text>
-        <polygon points={actArea} fill="var(--blue-500)" opacity="0.1" />
-        <polyline points={planPts} fill="none" stroke="var(--ink-400)" strokeWidth="2" strokeDasharray="5 4" />
-        <polyline points={actPts} fill="none" stroke="var(--blue-600)" strokeWidth="2.5" />
-        {actualCum.map((v, i) => <circle key={i} cx={x(i)} cy={y(v)} r="2.4" fill="#fff" stroke="var(--blue-600)" strokeWidth="1.5" />)}
-        {months.map((mo, i) => i % 2 === 0 ? <text key={i} x={x(i)} y={H - 8} fontSize="8.5" fill="var(--ink-500)" textAnchor="middle">{mo.label}</text> : null)}
-      </svg>
+      <div ref={wrapRef} style={{ position: 'relative' }} onMouseMove={onMove} onMouseLeave={() => setHov(null)}>
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ display: 'block' }}>
+          {[0, 25, 50, 75, 100].map(g => <g key={g}><line x1={pad.l} x2={W - pad.r} y1={y(g)} y2={y(g)} stroke="var(--line-soft)" /><text x={pad.l - 6} y={y(g) + 3} fontSize="9" fill="var(--ink-400)" textAnchor="end">{g}%</text></g>)}
+          {/* now line */}
+          <line x1={x(nowIdx)} x2={x(nowIdx)} y1={pad.t} y2={H - pad.b} stroke="var(--orange-400)" strokeWidth="1" strokeDasharray="3 3" />
+          <text x={x(nowIdx)} y={pad.t - 3} fontSize="9" fill="var(--orange-600)" textAnchor="middle" fontWeight="700">Hôm nay</text>
+          <polygon points={actArea} fill="var(--blue-500)" opacity="0.1" />
+          <polyline points={planPts} fill="none" stroke="var(--ink-400)" strokeWidth="2" strokeDasharray="5 4" />
+          <polyline points={actPts} fill="none" stroke="var(--blue-600)" strokeWidth="2.5" />
+          {actualCum.map((v, i) => <circle key={i} cx={x(i)} cy={y(v)} r={hov === i ? 4 : 2.4} fill="#fff" stroke="var(--blue-600)" strokeWidth="1.5" />)}
+          {/* hover guide */}
+          {hov != null && <>
+            <line x1={x(hov)} x2={x(hov)} y1={pad.t} y2={H - pad.b} stroke="var(--blue-400)" strokeWidth="1" />
+            <circle cx={x(hov)} cy={y(planCum[hov])} r="3.5" fill="var(--ink-500)" />
+            {hov < actualCum.length && <circle cx={x(hov)} cy={y(actualCum[hov])} r="4" fill="var(--blue-600)" />}
+          </>}
+          {months.map((mo, i) => i % 2 === 0 ? <text key={i} x={x(i)} y={H - 8} fontSize="8.5" fill="var(--ink-500)" textAnchor="middle">{mo.label}</text> : null)}
+        </svg>
+        {hov != null && (
+          <div style={{ position: 'absolute', left: hovLeftPct + '%', top: 6, transform: 'translateX(-50%)', background: 'var(--ink-900)', color: '#fff', borderRadius: 7, padding: '7px 10px', fontSize: 11, boxShadow: 'var(--shadow-pop)', pointerEvents: 'none', whiteSpace: 'nowrap', zIndex: 5 }}>
+            <div style={{ fontWeight: 700, marginBottom: 3, textAlign: 'center' }}>Tháng {months[hov].label}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 12, height: 0, borderTop: '2px dashed #cfd8e0' }} />KH: <b className="mono">{planCum[hov]}%</b></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}><span style={{ width: 12, height: 3, background: 'var(--blue-400)', borderRadius: 2 }} />TT: <b className="mono">{hov < actualCum.length ? actualCum[hov] + '%' : '—'}</b></div>
+            {hov < actualCum.length && <div style={{ marginTop: 3, paddingTop: 3, borderTop: '1px solid rgba(255,255,255,.15)', color: actualCum[hov] - planCum[hov] < 0 ? '#ff9b8a' : '#7fe0a3' }}>Lệch: {actualCum[hov] - planCum[hov] > 0 ? '+' : ''}{actualCum[hov] - planCum[hov]}%</div>}
+          </div>
+        )}
+      </div>
     );
   }
 

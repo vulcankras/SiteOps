@@ -174,7 +174,10 @@
     );
   }
 
-  function CongViec({ go }) {
+  function CongViec({ go, scope }) {
+    const scoped = scope && scope !== 'company';
+    const proj = scoped ? DB.projects.find(p => p.id === scope) : null;
+    const tasksV = DB.tasks.filter(t => !scoped || t.proj === scope);
     return (
       <div className="page">
         <div className="page-head">
@@ -183,16 +186,18 @@
             <h1 className="page-title">Công việc & Tiến độ</h1>
           </div>
           <div className="seg">
-            {[['Tất cả dự án', 'all'], ['Hữu Nghị–Chi Lăng', 'p1']].map(([l, k], i) => <button key={k} className={i === 0 ? 'active' : ''}>{l}</button>)}
+            {scoped
+              ? <button className="active">{proj.name}</button>
+              : [['Tất cả dự án', 'all'], ['Hữu Nghị–Chi Lăng', 'p1']].map(([l, k], i) => <button key={k} className={i === 0 ? 'active' : ''}>{l}</button>)}
           </div>
         </div>
         <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)', marginBottom: 14 }}>
-          <window.Stat label="Tổng công việc" icon="tasks" value={DB.tasks.length} edge="var(--blue-500)" />
-          <window.Stat label="Đang thực hiện" icon="play" value={DB.tasks.filter(t => t.status === 'doing').length} edge="var(--orange-500)" />
-          <window.Stat label="Chờ nghiệm thu" icon="check-circle" value={DB.tasks.filter(t => t.status === 'review').length} edge="var(--amber-500)" />
-          <window.Stat label="Hoàn thành" icon="flag" value={DB.tasks.filter(t => t.status === 'done').length} edge="var(--green-500)" />
+          <window.Stat label="Tổng công việc" icon="tasks" value={tasksV.length} edge="var(--blue-500)" />
+          <window.Stat label="Đang thực hiện" icon="play" value={tasksV.filter(t => t.status === 'doing').length} edge="var(--orange-500)" />
+          <window.Stat label="Chờ nghiệm thu" icon="check-circle" value={tasksV.filter(t => t.status === 'review').length} edge="var(--amber-500)" />
+          <window.Stat label="Hoàn thành" icon="flag" value={tasksV.filter(t => t.status === 'done').length} edge="var(--green-500)" />
         </div>
-        <TaskBoard go={go} />
+        <TaskBoard go={go} projId={scoped ? scope : null} />
       </div>
     );
   }

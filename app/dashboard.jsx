@@ -16,9 +16,10 @@
     );
   }
 
-  function Dashboard({ go }) {
+  function Dashboard({ go, scope: userScope }) {
     const [edit, setEdit] = useState(false);
     const [scope, setScope] = useState('all');
+    const dashProjects = DB.projects.filter(p => !userScope || userScope === 'company' || p.id === userScope);
     const [range, setRange] = useState('week');
     const initial = ['vol', 'projects', 'equip', 'trips', 'fuel', 'tasks', 'people', 'alerts'];
     const [order, setOrder] = useState(initial);
@@ -50,7 +51,7 @@
       projects: () => <Widget id="projects" title="Tiến độ dự án" icon="road" span={2} edit={edit} drag={dragProps(order.indexOf('projects'))}
         right={<button className="btn btn-sm btn-ghost" onClick={() => go({ page: 'cong-truong' })}>Xem tất cả</button>}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-          {DB.projects.map(p => (
+          {dashProjects.map(p => (
             <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => go({ page: 'cong-truong', sub: 'detail', id: p.id })}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
@@ -131,8 +132,8 @@
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <div className="seg">
-              {[['all', 'Tất cả dự án'], ['p1', 'Hữu Nghị–Chi Lăng'], ['p2', 'Đồng Văn']].map(([k, l]) =>
-                <button key={k} className={scope === k ? 'active' : ''} onClick={() => setScope(k)}>{l}</button>)}
+              {(userScope && userScope !== 'company' ? [[userScope, DB.projects.find(p => p.id === userScope).name]] : [['all', 'Tất cả dự án'], ['p1', 'Hữu Nghị–Chi Lăng'], ['p2', 'Đồng Văn']]).map(([k, l]) =>
+                <button key={k} className={(userScope && userScope !== 'company') || scope === k ? 'active' : ''} onClick={() => setScope(k)}>{l}</button>)}
             </div>
             <div className="seg">
               {[['week', 'Tuần'], ['month', 'Tháng'], ['quarter', 'Quý']].map(([k, l]) =>

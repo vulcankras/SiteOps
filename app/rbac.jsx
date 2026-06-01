@@ -15,6 +15,7 @@
   const ACTIONS = [['view', 'Xem'], ['create', 'Tạo'], ['edit', 'Sửa'], ['delete', 'Xoá'], ['approve', 'Duyệt'], ['export', 'Xuất']];
 
   const EXTRA = [
+    { id: 'kt', name: 'Cán bộ kỹ thuật', sub: 'P. Kế hoạch kỹ thuật', desc: 'Công việc, tiến độ, nhật ký, nghiệm thu kỹ thuật.', system: false },
     { id: 'wh', name: 'Thủ kho', sub: 'Kho hàng', desc: 'Quản lý nhập/xuất/tồn kho, thiết bị, vật tư.', system: false },
     { id: 'acc', name: 'Kế toán', sub: 'P. Kế toán', desc: 'Tài chính, lương, công nợ, báo cáo.', system: false },
   ];
@@ -36,9 +37,13 @@
       case 'watch': // Người theo dõi — KT/KH kỹ thuật, chỉ xem
         if (['phan-quyen', 'cai-dat'].includes(mid)) return none;
         return P(true, false, false, false, false, true);
-      case 'exec': // Người thực hiện — nhập liệu phần được giao
+      case 'exec': // Cán bộ vật tư — nhập liệu phần được giao
         if ([...FIELD, ...KHO, 'cong-truong'].includes(mid)) return P(true, true, true, false, false, false);
         if (mid === 'dashboard') return P(true, false, false, false, false, false);
+        return none;
+      case 'kt': // Cán bộ kỹ thuật
+        if ([...FIELD, 'cong-truong'].includes(mid)) return P(true, true, true, false, false, true);
+        if (['dashboard', 'kho-thiet-bi', 'kho-ton', 'bao-cao'].includes(mid)) return P(true, false, false, false, false, false);
         return none;
       case 'wh': // Thủ kho
         if (KHO.includes(mid)) return P(true, true, true, true, true, true);

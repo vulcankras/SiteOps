@@ -35,10 +35,18 @@
     { id: 'cai-dat', label: 'Cài đặt hệ thống', icon: 'settings' },
   ];
 
-  function Sidebar({ nav, go, mini }) {
+  function Sidebar({ nav, go, mini, role }) {
     const [open, setOpen] = useState({ kho: false, 'nhan-su': false });
     const topId = nav.page;
+    const PERM = window.PERM;
+    const can = (id) => !PERM || PERM.canNav(role, id);
     const W = mini ? 60 : 'var(--sidebar-w)';
+    const items = NAV.map(n => {
+      if (n.sep) return n;
+      if (n.subs) { const subs = n.subs.filter(s => can(s.id)); return subs.length ? { ...n, subs } : null; }
+      return can(n.id) ? n : null;
+    }).filter(Boolean);
+    const navItems = items.filter((n, i) => !(n.sep && (i === 0 || i === items.length - 1 || (items[i - 1] && items[i - 1].sep))));
     return (
       <aside style={{ width: W, background: 'var(--blue-900)', color: '#cdd9e4', display: 'flex', flexDirection: 'column', flex: 'none', position: 'sticky', top: 0, height: '100vh', transition: 'width .16s' }}>
         {/* logo */}
@@ -51,7 +59,7 @@
         </div>
         {/* nav */}
         <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: mini ? '10px 6px' : '10px 8px' }}>
-          {NAV.map((n, i) => {
+          {navItems.map((n, i) => {
             if (n.sep) return <div key={i} style={{ height: 1, background: 'rgba(255,255,255,.08)', margin: mini ? '10px 6px' : '10px 8px' }} />;
             const active = topId === n.id || (n.subs && n.subs.some(s => s.id === topId));
             const isOpen = open[n.id];
@@ -98,7 +106,9 @@
     );
   }
 
-  function Topbar({ role, setRole, go, onMobile, onAlerts, alertCount }) {
+  function Topbar({ role, setRole, go, onMobile, onAlerts, alertCount, auth, onLogout }) {
+    const scopeLabel = auth && auth.scope && auth.scope !== 'company' ? (DB.projects.find(p => p.id === auth.scope) || {}).name : 'Tổng công ty';
+    const user = (auth && auth.user) || { name: 'Nguyễn Văn An', title: 'Giám đốc dự án' };
     return (
       <header style={{ height: 'var(--topbar-h)', background: '#fff', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 14, padding: '0 18px', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ position: 'relative', width: 340, maxWidth: '32vw' }}>
@@ -107,37 +117,39 @@
           <kbd style={{ position: 'absolute', right: 8, top: 8, fontSize: 10, color: 'var(--ink-400)', background: '#fff', border: '1px solid var(--line)', borderRadius: 4, padding: '1px 5px' }}>⌘K</kbd>
         </div>
         <div style={{ flex: 1 }} />
-        <button className="btn btn-sm" onClick={onMobile} style={{ gap: 6 }}><Icon name="qr" size={15} />Chế độ hiện trường</button>
         {/* role switcher */}
         <Menu align="right" trigger={
           <button className="btn btn-sm" style={{ gap: 7, borderColor: 'var(--blue-200)', background: 'var(--blue-50)', color: 'var(--blue-700)' }}>
-            <Icon name="shield-check" size={14} />Vai trò: <b style={{ fontWeight: 700 }}>{DB.roles.find(r => r.id === role).name}</b>
+            <Icon name="shield-check" size={14} />Vai trò: <b style={{ fontWeight: 700 }}>{(window.PERM ? window.PERM.roles : DB.roles).find(r => r.id === role).name}</b>
             <Icon name="chevron-down" size={13} />
           </button>
-        } items={DB.roles.map(r => ({ label: r.name + ' — ' + r.sub, icon: role === r.id ? 'check' : 'shield-check', onClick: () => setRole(r.id) }))} />
+        } items={(window.PERM ? window.PERM.roles : DB.roles).map(r => ({ label: r.name + ' — ' + r.sub, icon: role === r.id ? 'check' : 'shield-check', onClick: () => setRole(r.id) }))} />
         <button className="btn btn-icon btn-sm btn-ghost" onClick={onAlerts} style={{ position: 'relative' }}>
           <Icon name="bell" size={17} />
           {alertCount > 0 && <span style={{ position: 'absolute', top: 2, right: 2, minWidth: 15, height: 15, background: 'var(--red-500)', color: '#fff', borderRadius: 8, fontSize: 9.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>{alertCount}</span>}
         </button>
         <div style={{ width: 1, height: 24, background: 'var(--line)' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <window.Avatar id="u1" />
-          <div style={{ lineHeight: 1.2 }}>
-            <div style={{ fontWeight: 600, fontSize: 12.5 }}>Nguyễn Văn An</div>
-            <div style={{ fontSize: 10.5, color: 'var(--ink-500)' }}>Giám đốc dự án</div>
-          </div>
-        </div>
+        <Menu align="right" trigger={
+          <button className="btn btn-sm btn-ghost" style={{ gap: 9, height: 40 }}>
+            <span className="av" style={{ background: 'var(--blue-500)' }}>{(user.name.trim().split(/\s+/).slice(-2).map(s => s[0]).join(''))}</span>
+            <div style={{ lineHeight: 1.2, textAlign: 'left' }}>
+              <div style={{ fontWeight: 600, fontSize: 12.5 }}>{user.name}</div>
+              <div style={{ fontSize: 10.5, color: 'var(--ink-500)' }}>{user.title} · {scopeLabel}</div>
+            </div>
+            <Icon name="chevron-down" size={13} />
+          </button>
+        } items={[{ label: 'Tài khoản cá nhân', icon: 'customer' }, { label: 'Đổi đơn vị làm việc', icon: 'refresh', onClick: onLogout }, { sep: true }, { label: 'Đăng xuất', icon: 'log-out', danger: true, onClick: onLogout }]} />
       </header>
     );
   }
 
-  function Shell({ nav, go, role, setRole, onMobile, mini, children }) {
+  function Shell({ nav, go, role, setRole, onMobile, mini, auth, onLogout, children }) {
     const [alertsOpen, setAlertsOpen] = useState(false);
     return (
       <div className="app">
-        <Sidebar nav={nav} go={go} mini={mini} />
+        <Sidebar nav={nav} go={go} mini={mini} role={role} />
         <div className="main">
-          <Topbar role={role} setRole={setRole} go={go} onMobile={onMobile} alertCount={DB.alerts.length} onAlerts={() => setAlertsOpen(o => !o)} />
+          <Topbar role={role} setRole={setRole} go={go} onMobile={onMobile} auth={auth} onLogout={onLogout} alertCount={DB.alerts.length} onAlerts={() => setAlertsOpen(o => !o)} />
           <div className="content">{children}</div>
         </div>
         {alertsOpen && <AlertPanel onClose={() => setAlertsOpen(false)} />}

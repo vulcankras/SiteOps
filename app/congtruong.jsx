@@ -6,8 +6,9 @@
   const PROJ_ST = { active: { label: 'Đang thi công', cls: 'badge-green' }, paused: { label: 'Tạm dừng', cls: 'badge-amber' }, done: { label: 'Hoàn thành', cls: 'badge-blue' } };
   const PROG_LABEL = { volume: 'Theo khối lượng (m³)', weighted: 'Theo tỷ trọng công việc', percent: 'Theo % thủ công' };
 
-  function CongTruong({ nav, go, role }) {
-    if (nav.sub === 'detail' && window.CTDetail) return <window.CTDetail id={nav.id} go={go} role={role} initTab={nav.tab} />;
+  function CongTruong({ nav, go, role, scope }) {
+    if (nav.sub === 'detail' && window.CTDetail) return <window.CTDetail id={nav.id} go={go} role={role} scope={scope} initTab={nav.tab} />;
+    const projects = DB.projects.filter(p => !scope || scope === 'company' || p.id === scope);
 
     const [view, setView] = useState('grid');
     const [tplModal, setTplModal] = useState(false);
@@ -48,7 +49,7 @@
 
         {view === 'grid' ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(330px,1fr))', gap: 14 }}>
-            {DB.projects.map(p => {
+            {projects.map(p => {
               const tpl = DB.templates.find(t => t.id === p.template);
               return (
                 <div key={p.id} className="card" style={{ cursor: 'pointer', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
@@ -89,7 +90,7 @@
             <table className="tbl">
               <thead><tr><th>Mã / Tên dự án</th><th>Template</th><th>Địa điểm</th><th>Chỉ huy</th><th>Tiến độ</th><th className="num">Giá trị HĐ</th><th>Trạng thái</th></tr></thead>
               <tbody>
-                {DB.projects.map(p => {
+                {projects.map(p => {
                   const tpl = DB.templates.find(t => t.id === p.template);
                   return <tr key={p.id} className="clickable" onClick={() => go({ page: 'cong-truong', sub: 'detail', id: p.id })}>
                     <td><div style={{ fontWeight: 600 }}>{p.name}</div><div className="mono" style={{ fontSize: 10.5, color: 'var(--ink-500)' }}>{p.code}</div></td>
