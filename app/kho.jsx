@@ -108,8 +108,8 @@
           </div>
           <div className="card" style={{ overflow: 'hidden' }}>
             {kind === 'thiet-bi' ? (
-              <table className="tbl tbl-compact"><thead><tr><th>Mã TB</th><th>Tên</th><th>Series</th><th className="num">Giờ/Km</th><th>Tình trạng trả</th><th></th></tr></thead>
-                <tbody><tr><td className="mono">{DB.equipment[6].code}</td><td>{DB.equipment[6].name}</td><td className="mono">{DB.equipment[6].series}</td><td className="num">{nf(DB.equipment[6].kmNow)}</td><td><select className="select" style={{ height: 28 }}><option>Tốt</option><option>Cần sửa chữa</option><option>Hỏng</option></select></td><td><button className="btn btn-icon btn-sm btn-ghost"><Icon name="trash" size={13} /></button></td></tr></tbody>
+              <table className="tbl tbl-compact"><thead><tr><th>Mã TB</th><th>Tên</th><th>ĐVT</th><th className="num">Đơn giá</th><th className="num">Thành tiền</th><th className="num">Giờ/Km</th><th>Tình trạng trả</th><th></th></tr></thead>
+                <tbody><tr><td className="mono">{DB.equipment[6].code}</td><td>{DB.equipment[6].name}</td><td>Chiếc</td><td className="num"><input className="input mono" style={{ height: 28, width: 100 }} defaultValue="57.000.000" /></td><td className="num"><b>57.000.000</b></td><td className="num">{nf(DB.equipment[6].kmNow)}</td><td><select className="select" style={{ height: 28 }}><option>Tốt</option><option>Cần sửa chữa</option><option>Hỏng</option></select></td><td><button className="btn btn-icon btn-sm btn-ghost"><Icon name="trash" size={13} /></button></td></tr></tbody>
               </table>
             ) : (
               <table className="tbl tbl-compact"><thead><tr><th>Vật tư</th><th>ĐV</th><th className="num">SL nhập</th><th className="num">Đơn giá</th><th className="num">Thành tiền</th><th></th></tr></thead>
@@ -119,7 +119,7 @@
               </table>
             )}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, gap: 30, fontSize: 13 }}><span className="muted">Tổng thành tiền</span><b className="mono" style={{ fontSize: 15, color: 'var(--blue-700)' }}>57.000.000 ₫</b></div>
+          {<div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, gap: 30, fontSize: 13 }}><span className="muted">Tổng thành tiền</span><b className="mono" style={{ fontSize: 15, color: 'var(--blue-700)' }}>57.000.000 ₫</b></div>}
         </Modal>
         {scan && <window.QRScan title="Quét QR thiết bị nhập kho" onClose={() => setScan(false)} />}
       </>
@@ -168,6 +168,8 @@
   function XuatForm({ type, onClose }) {
     const [scan, setScan] = useState(false);
     const isEquip = type.id !== 'vat-tu';
+    const isRent = type.id === 'cho-thue';
+    const [rentMode, setRentMode] = useState('order');
     return (
       <>
         <Modal title={type.label} sub="Hỗ trợ quét QR liên tục nhiều thiết bị" width={820} onClose={onClose}
@@ -179,17 +181,22 @@
             {type.id === 'vat-tu' && <><Field label="Công trường / Điểm nhận" req><select className="select">{DB.projects.map(p => <option key={p.id}>{p.name}</option>)}</select></Field><Field label="Người nhận" req><select className="select">{DB.people.map(p => <option key={p.id}>{p.name}</option>)}</select></Field><Field label="Lý do xuất" req><select className="select"><option>Xuất thi công</option><option>Sửa chữa</option><option>Khác</option></select></Field></>}
             {type.id === 'luan-chuyen' && <><Field label="Kho / Công trường đích" req><select className="select">{DB.projects.map(p => <option key={p.id}>{p.name}</option>)}</select></Field><Field label="Người phụ trách nhận" req><select className="select">{DB.people.map(p => <option key={p.id}>{p.name}</option>)}</select></Field><Field label="Ngày dự kiến trả"><input className="input" type="date" /></Field></>}
             {type.id === 'thanh-ly' && <><Field label="Phương thức" req><select className="select"><option>Bán</option><option>Tiêu hủy</option><option>Hủy bỏ</option></select></Field><Field label="Đối tác mua" req><select className="select">{DB.customers.map(c => <option key={c.id}>{c.name}</option>)}</select></Field><Field label="Giá thanh lý tổng" req><input className="input mono" placeholder="₫" /></Field></>}
-            {type.id === 'cho-thue' && <><Field label="Đối tác thuê" req><select className="select">{DB.partners.map(p => <option key={p.id}>{p.name}</option>)}</select></Field><Field label="Thuê từ → đến" req span={1}><div style={{ display: 'flex', gap: 6 }}><input className="input" type="date" /><input className="input" type="date" /></div></Field><Field label="Đơn giá thuê" req><div style={{ display: 'flex', gap: 6 }}><input className="input mono" placeholder="₫" /><select className="select" style={{ width: 80 }}><option>Giờ</option><option>Ngày</option><option>Tháng</option></select></div></Field></>}
+            {type.id === 'cho-thue' && <><Field label="Đối tác thuê" req><select className="select">{DB.partners.map(p => <option key={p.id}>{p.name}</option>)}</select></Field>{rentMode === 'order' && <><Field label="Thuê từ → đến" req span={1}><div style={{ display: 'flex', gap: 6 }}><input className="input" type="date" /><input className="input" type="date" /></div></Field><Field label="Đơn giá thuê" req><div style={{ display: 'flex', gap: 6 }}><input className="input mono" placeholder="₫" /><select className="select" style={{ width: 80 }}><option>Giờ</option><option>Ngày</option><option>Tháng</option></select></div></Field></>}</>}
           </div>
           <div className="divider" style={{ margin: '16px 0' }} />
+          {isRent && <div className="auto-note" style={{ marginTop: 0, marginBottom: 10 }}><Icon name="clock" size={13} />Áp dụng thời gian & giá thuê:
+            <div className="seg" style={{ marginLeft: 8 }}><button className={rentMode === 'order' ? 'active' : ''} onClick={() => setRentMode('order')}>Toàn đơn</button><button className={rentMode === 'device' ? 'active' : ''} onClick={() => setRentMode('device')}>Từng thiết bị</button></div>
+          </div>}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 9 }}>
             <b style={{ fontSize: 12.5 }}>{isEquip ? 'Danh sách thiết bị' : 'Danh sách vật tư'}</b>
             {isEquip && <button className="btn btn-sm btn-accent" onClick={() => setScan(true)}><Icon name="scan" size={14} />Quét QR liên tục</button>}
           </div>
           <div className="card" style={{ overflow: 'hidden' }}>
-            {isEquip ? <table className="tbl tbl-compact"><thead><tr><th>Mã TB</th><th>Tên</th><th>Series/Biển số</th><th className="num">Giờ/Km</th><th>Tình trạng</th></tr></thead>
+            {isEquip ? (isRent && rentMode === 'device' ? <table className="tbl tbl-compact"><thead><tr><th>Mã TB</th><th>Tên</th><th>Series</th><th>Thuê từ</th><th>Thuê đến</th><th className="num">Đơn giá thuê</th><th>Tình trạng</th></tr></thead>
+              <tbody><tr><td className="mono">{DB.equipment[7].code}</td><td>{DB.equipment[7].name}</td><td className="mono">{DB.equipment[7].series}</td><td><input className="input" type="date" style={{ height: 28, width: 130 }} /></td><td><input className="input" type="date" style={{ height: 28, width: 130 }} /></td><td className="num"><div style={{ display: 'flex', gap: 4 }}><input className="input mono" style={{ height: 28, width: 80 }} placeholder="₫" /><select className="select" style={{ height: 28, width: 64 }}><option>Giờ</option><option>Ngày</option><option>Tháng</option></select></div></td><td><select className="select" style={{ height: 28 }}><option>Tốt</option><option>Bình thường</option></select></td></tr></tbody>
+            </table> : <table className="tbl tbl-compact"><thead><tr><th>Mã TB</th><th>Tên</th><th>Series/Biển số</th><th className="num">Giờ/Km</th><th>Tình trạng</th></tr></thead>
               <tbody><tr><td className="mono">{DB.equipment[7].code}</td><td>{DB.equipment[7].name}</td><td className="mono">{DB.equipment[7].series}</td><td className="num">{nf(DB.equipment[7].hourNow, 1)}</td><td><select className="select" style={{ height: 28 }}><option>Tốt</option><option>Bình thường</option><option>Hỏng nhẹ</option></select></td></tr></tbody>
-            </table> : <table className="tbl tbl-compact"><thead><tr><th>Vật tư</th><th>ĐV</th><th className="num">Tồn</th><th className="num">SL yêu cầu</th><th className="num">SL thực xuất</th></tr></thead>
+            </table>) : <table className="tbl tbl-compact"><thead><tr><th>Vật tư</th><th>ĐV</th><th className="num">Tồn</th><th className="num">SL yêu cầu</th><th className="num">SL thực xuất</th></tr></thead>
               <tbody><tr><td><select className="select" style={{ height: 28 }}>{DB.materials.map(m => <option key={m.id}>{m.name}</option>)}</select></td><td>Lít</td><td className="num">{nf(6800)}</td><td className="num"><input className="input mono" style={{ height: 28, width: 70 }} defaultValue="500" /></td><td className="num"><input className="input mono" style={{ height: 28, width: 70 }} defaultValue="500" /></td></tr></tbody>
             </table>}
           </div>
