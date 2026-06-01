@@ -25,6 +25,8 @@
     React.useEffect(() => { window.__setMini = setMini; }, []);
     const go = (n) => { if (n.sub !== 'detail') setMini(false); setNav(n); window.scrollTo(0, 0); const c = document.querySelector('.content'); if (c) c.scrollTop = 0; };
     const onLogin = (acc) => { setAuth(acc); setRole(acc.role); if (acc.scope && acc.scope !== 'company') setNav({ page: 'cong-truong', sub: 'detail', id: acc.scope }); else setNav({ page: 'dashboard' }); };
+    const ROLE_SCOPE = { pm: 'company', watch: 'company', wh: 'company', acc: 'company', site: 'p1', exec: 'p1', kt: 'p1' };
+    const switchRole = (rid) => { const sc = ROLE_SCOPE[rid] || 'company'; setRole(rid); setAuth(a => ({ ...(a || {}), role: rid, scope: sc })); setMini(false); if (sc !== 'company') setNav({ page: 'cong-truong', sub: 'detail', id: sc }); else setNav({ page: 'dashboard' }); window.scrollTo(0, 0); };
     const logout = () => { setAuth(null); setMini(false); setNav({ page: 'dashboard' }); };
     const scope = auth ? auth.scope : 'company';
     const scoped = scope && scope !== 'company';
@@ -38,7 +40,7 @@
     const P = window;
     const goX = scoped ? go2 : go;
     switch (nav.page) {
-      case 'dashboard': page = <Dashboard go={goX} scope={scope} />; break;
+      case 'dashboard': page = <Dashboard go={goX} scope={scope} role={role} />; break;
       case 'cong-truong': page = P.CongTruong ? <P.CongTruong nav={nav} go={goX} role={role} scope={scope} /> : <Coming title="Công trường" />; break;
       case 'cong-viec': page = P.CongViec ? <P.CongViec go={goX} scope={scope} /> : <Coming title="Công việc" />; break;
       case 'khach-hang': page = P.KhachHang ? <P.KhachHang /> : <Coming title="Khách hàng" />; break;
@@ -48,13 +50,13 @@
       case 'cai-dat': page = P.CaiDat ? <P.CaiDat /> : <Coming title="Cài đặt hệ thống" />; break;
       default:
         if (nav.page.startsWith('kho')) { page = P.Kho ? <P.Kho nav={nav} go={goX} /> : <Coming title="Kho hàng" />; }
-        else if (nav.page.startsWith('hrm')) { page = P.HRM ? <P.HRM nav={nav} go={goX} /> : <Coming title="Nhân sự" />; }
+        else if (nav.page.startsWith('hrm')) { page = P.HRM ? <P.HRM nav={nav} go={goX} scope={scope} /> : <Coming title="Nhân sự" />; }
         else page = <Coming title={nav.page} />;
     }
 
     return (
       <>
-        <Shell nav={nav} go={goX} role={role} setRole={setRole} mini={mini} auth={auth} onLogout={logout}>
+        <Shell nav={nav} go={goX} role={role} setRole={switchRole} mini={mini} auth={auth} onLogout={logout}>
           {page}
         </Shell>
         <ToastHost />

@@ -7,7 +7,7 @@
   const PROG_LABEL = { volume: 'Theo khối lượng (m³)', weighted: 'Theo tỷ trọng công việc', percent: 'Theo % thủ công' };
 
   function CongTruong({ nav, go, role, scope }) {
-    if (nav.sub === 'detail' && window.CTDetail) return <window.CTDetail id={nav.id} go={go} role={role} scope={scope} initTab={nav.tab} />;
+    if (nav.sub === 'detail' && window.CTDetail) return <window.CTDetail id={nav.id} go={go} role={role} scope={scope} siteScoped={scope && scope !== 'company'} initTab={nav.tab} />;
     const projects = DB.projects.filter(p => !scope || scope === 'company' || p.id === scope);
 
     const [view, setView] = useState('grid');

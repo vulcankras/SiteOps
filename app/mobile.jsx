@@ -7,8 +7,8 @@
 
   /* ---------- tài khoản demo theo vai trò hiện trường ---------- */
   const M_ROLES = {
-    laimay: { name: 'Hoàng Văn Hải', title: 'Thợ lái máy', icon: 'excavator', tiles: ['chamcong', 'quetmay', 'tangca', 'lichsu'], nav: ['home', 'chamcong', 'quetmay'] },
-    laixe: { name: 'Bùi Văn Khoa', title: 'Lái xe Howo', icon: 'truck', tiles: ['chamcong', 'quetchuyen', 'nhatkyxe', 'tangca'], nav: ['home', 'chamcong', 'quetchuyen'] },
+    laimay: { name: 'Hoàng Văn Hải', title: 'Vận hành máy thi công', icon: 'excavator', tiles: ['chamcong', 'quetmay', 'tangca', 'lichsu'], nav: ['home', 'chamcong', 'quetmay'] },
+    laixe: { name: 'Bùi Văn Khoa', title: 'Lái xe vận tải (Howo)', icon: 'truck', tiles: ['chamcong', 'nhatkyxe', 'quetchuyen', 'tangca'], nav: ['home', 'chamcong', 'nhatkyxe'] },
     vattu: { name: 'Đỗ Thị Mai', title: 'Cán bộ vật tư / Thủ kho', icon: 'package', tiles: ['quetkho', 'kiemtb', 'vatlieu', 'tonkho'], nav: ['home', 'quetkho', 'kiemtb'] },
     kythuat: { name: 'Phạm Minh Đức', title: 'Cán bộ kỹ thuật', icon: 'tasks', tiles: ['nhatky', 'tiendo', 'nghiemthu', 'anh'], nav: ['home', 'nhatky', 'tiendo'] },
     chuhuy: { name: 'Trần Văn Cường', title: 'Chỉ huy trưởng', icon: 'shield-check', tiles: ['duyet', 'dashboard', 'nhatky', 'nhansu'], nav: ['home', 'duyet', 'chamcong'] },
@@ -16,9 +16,9 @@
   };
   const TILE = {
     chamcong: { s: 'chamcong', label: 'Chấm công GPS', sub: 'Vào/ra ca', icon: 'crosshair', c: ORANGE },
-    quetmay: { s: 'quetmay', label: 'Nhật trình máy', sub: 'Quét QR · giờ máy', icon: 'excavator', c: '#6D5BD0' },
-    quetchuyen: { s: 'quetchuyen', label: 'Đếm chuyến xe', sub: 'Quét QR vật liệu đổ', icon: 'scan', c: BLUE },
-    nhatkyxe: { s: 'nhatkyxe', label: 'Nhật ký xe', sub: 'Chuyến · khối lượng', icon: 'truck', c: BLUE },
+    quetmay: { s: 'quetmay', label: 'Nhật trình máy', sub: 'Giờ máy · sản lượng', icon: 'excavator', c: '#6D5BD0' },
+    quetchuyen: { s: 'quetchuyen', label: 'Đếm chuyến nhanh', sub: 'Quét QR vật liệu đổ', icon: 'scan', c: BLUE },
+    nhatkyxe: { s: 'nhatkyxe', label: 'Nhật ký xe', sub: 'Chuyến · tải trọng · km', icon: 'truck', c: BLUE },
     quetkho: { s: 'quetkho', label: 'Xuất / Nhập kho', sub: 'Quét QR vật tư · TB', icon: 'warehouse', c: GREEN },
     kiemtb: { s: 'kiemtb', label: 'Định danh / Kiểm kê', sub: 'Quét QR thiết bị', icon: 'qr', c: '#11888A' },
     vatlieu: { s: 'quetchuyen', label: 'Xác nhận vật liệu đổ', sub: 'Quét QR đếm chuyến', icon: 'scan', c: ORANGE },
@@ -85,27 +85,90 @@
 
   function QuetMay() {
     const [picked, setPicked] = useState(false);
-    const [trips, setTrips] = useState(0);
+    const [hcur, setHcur] = useState('');
     const e = DB.equipment[0];
-    const vol = 12, total = trips * vol;
+    const hStart = picked ? e.hourNow : 0;
+    const hours = picked && hcur ? Math.max(0, (Number(hcur) - hStart)).toFixed(1) : '0.0';
+    const fuelNorm = 18;
+    const fuelEst = (Number(hours) * fuelNorm).toFixed(0);
     return (
       <div style={{ padding: 16 }}>
         <button onClick={() => { setPicked(true); toast('Đã nạp thông tin máy: ' + e.name); }} style={{ width: '100%', height: 50, borderRadius: 14, border: 'none', background: picked ? '#DBF1E3' : ORANGE, color: picked ? GREEN : '#fff', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', marginBottom: 16 }}>
-          <Icon name={picked ? 'check-circle' : 'scan'} size={19} />{picked ? 'Đã nhận diện: ' + e.name : 'Quét QR máy'}
+          <Icon name={picked ? 'check-circle' : 'scan'} size={19} />{picked ? 'Đã nhận diện: ' + e.name : 'Quét QR máy thi công'}
         </button>
-        <Field label="Công việc"><select style={inp}><option>Đắp đất K95 lớp 1-4</option><option>Lu lèn K98</option></select></Field>
-        <Field label="Số giờ máy ban đầu" hint="Tự động từ lần ghi cuối"><input style={{ ...inp, background: '#f7fafc', fontFamily: 'var(--mono)' }} value={picked ? nf(e.hourNow, 1) : ''} readOnly placeholder="—" /></Field>
-        <Field label="Số giờ máy hiện tại *"><input style={{ ...inp, fontFamily: 'var(--mono)' }} placeholder="Nhập đồng hồ giờ máy" /></Field>
-        <div style={{ background: '#f7fafc', border: '1px solid #e4e9ee', borderRadius: 12, padding: 12, marginBottom: 14 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="truck" size={14} style={{ color: ORANGE }} />Khối lượng vận chuyển trong ngày</div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <div style={{ flex: 1 }}><div style={{ fontSize: 11, color: '#6b8094', marginBottom: 4 }}>Số chuyến</div><input type="number" value={trips} onChange={e => setTrips(+e.target.value)} style={{ ...inp, height: 40, fontFamily: 'var(--mono)' }} /></div>
-            <div style={{ flex: 1 }}><div style={{ fontSize: 11, color: '#6b8094', marginBottom: 4 }}>KL/chuyến</div><input value={vol + ' m³'} readOnly style={{ ...inp, height: 40, fontFamily: 'var(--mono)', background: '#fff' }} /></div>
+        {picked && <div style={{ background: '#fff', border: '1px solid #e4e9ee', borderRadius: 12, padding: 12, marginBottom: 14 }} className="fade-in">
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#6b8094', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8, display: 'flex', gap: 6, alignItems: 'center' }}><Icon name="qr" size={12} style={{ color: GREEN }} />Thông tin máy (tự động từ QR)</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px 14px', fontSize: 12 }}>
+            {[['Mã máy', e.code], ['Model', e.model], ['Loại máy', e.cat], ['Dung tích gầu', e.bucket || '—'], ['Công suất', e.power], ['Định mức NL', fuelNorm + ' L/giờ']].map(([k, v]) => <React.Fragment key={k}><span style={{ color: '#6b8094' }}>{k}</span><b style={{ textAlign: 'right' }}>{v}</b></React.Fragment>)}
           </div>
-          <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 11px', background: '#fff', borderRadius: 9 }}><span style={{ fontSize: 12, color: '#6b8094' }}>Tổng KL/ngày</span><b style={{ fontFamily: 'var(--mono)', color: ORANGE, fontSize: 15 }}>{nf(total, 1)} m³</b></div>
+        </div>}
+        <Field label="Công việc / Hạng mục"><select style={inp}><option>Đào đất các loại</option><option>Đắp đất K95 lớp 1-4</option><option>Lu lèn K98 hoàn thiện nền</option><option>San nền</option></select></Field>
+        <Field label="Khu vực thi công"><select style={inp}>{DB.areas.filter(a => a.proj === 'p1').map(a => <option key={a.id}>{a.name}</option>)}</select></Field>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ flex: 1 }}><Field label="Giờ máy ban đầu" hint="Tự động"><input style={{ ...inp, background: '#f7fafc', fontFamily: 'var(--mono)' }} value={picked ? nf(hStart, 1) : ''} readOnly placeholder="—" /></Field></div>
+          <div style={{ flex: 1 }}><Field label="Giờ máy hiện tại *"><input value={hcur} onChange={e => setHcur(e.target.value)} style={{ ...inp, fontFamily: 'var(--mono)' }} placeholder="Đồng hồ" inputMode="decimal" /></Field></div>
         </div>
+        <Field label="Số giờ hoạt động" hint="= hiện tại − ban đầu"><input style={{ ...inp, background: '#fff', fontFamily: 'var(--mono)', fontWeight: 700, color: '#6D5BD0' }} value={hours + ' giờ'} readOnly /></Field>
+        <Field label="Nhiên liệu dự kiến" hint="= giờ hoạt động × định mức"><input style={{ ...inp, background: '#f7fafc', fontFamily: 'var(--mono)', fontWeight: 700, color: ORANGE }} value={fuelEst + ' L'} readOnly /></Field>
+        <div style={{ background: '#f7fafc', border: '1px solid #e4e9ee', borderRadius: 12, padding: 12, marginBottom: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="cube" size={14} style={{ color: '#6D5BD0' }} />Sản lượng thi công</div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ flex: 2 }}><div style={{ fontSize: 11, color: '#6b8094', marginBottom: 4 }}>Khối lượng hoàn thành</div><input style={{ ...inp, height: 40, fontFamily: 'var(--mono)' }} placeholder="VD: 450" inputMode="decimal" /></div>
+            <div style={{ flex: 1 }}><div style={{ fontSize: 11, color: '#6b8094', marginBottom: 4 }}>Đơn vị</div><select style={{ ...inp, height: 40 }}><option>m³</option><option>m²</option><option>tấn</option></select></div>
+          </div>
+        </div>
+        <Field label="Dầu Diesel cấp (L)"><input style={{ ...inp, fontFamily: 'var(--mono)' }} placeholder="Lít" inputMode="decimal" /></Field>
+        <div style={{ fontSize: 11, color: '#6b8094', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}><Icon name="crosshair" size={13} style={{ color: GREEN }} />Vị trí máy: Km4+500 (GPS tự động)</div>
         <PhotoReq />
         <button style={btnP} onClick={() => toast('Đã lưu nhật trình máy (offline — chờ sync)')}>Lưu & cập nhật giờ máy</button>
+      </div>
+    );
+  }
+
+  function NhatKyXe() {
+    const [picked, setPicked] = useState(false);
+    const [trips, setTrips] = useState(0);
+    const [kmCur, setKmCur] = useState('');
+    const e = DB.equipment[4];
+    const kmStart = picked ? e.kmNow : 0;
+    const load = e.avgTrip || 12;
+    const dist = picked && kmCur ? Math.max(0, (Number(kmCur) - kmStart)) : 0;
+    const totalVol = trips * load;
+    const fuelNorm = 6;
+    const fuelEst = trips * fuelNorm;
+    return (
+      <div style={{ padding: 16 }}>
+        <button onClick={() => { setPicked(true); toast('Đã nạp xe: ' + e.name + ' · ' + e.plate); }} style={{ width: '100%', height: 50, borderRadius: 14, border: 'none', background: picked ? '#DBF1E3' : ORANGE, color: picked ? GREEN : '#fff', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', marginBottom: 16 }}>
+          <Icon name={picked ? 'check-circle' : 'scan'} size={19} />{picked ? e.name + ' · ' + e.plate : 'Quét QR xe vận tải'}
+        </button>
+        {picked && <div style={{ background: '#fff', border: '1px solid #e4e9ee', borderRadius: 12, padding: 12, marginBottom: 14 }} className="fade-in">
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#6b8094', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8, display: 'flex', gap: 6, alignItems: 'center' }}><Icon name="qr" size={12} style={{ color: GREEN }} />Thông tin xe (tự động từ QR)</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px 14px', fontSize: 12 }}>
+            {[['Biển số', e.plate], ['Loại xe', e.cat], ['Tải trọng', e.load], ['Thể tích thùng', e.bucketVol], ['Định mức NL', fuelNorm + ' L/chuyến'], ['Nhà thầu', 'Đội vận tải A']].map(([k, v]) => <React.Fragment key={k}><span style={{ color: '#6b8094' }}>{k}</span><b style={{ textAlign: 'right' }}>{v}</b></React.Fragment>)}
+          </div>
+        </div>}
+        <Field label="Công việc / Hạng mục"><select style={inp}><option>Đất đắp</option><option>Đất điều phối</option><option>Vận chuyển CPĐD</option><option>Chở phế thải</option></select></Field>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ flex: 1 }}><Field label="Khu vực lấy"><input style={inp} placeholder="VD: Km7+800" /></Field></div>
+          <div style={{ flex: 1 }}><Field label="Khu vực đổ"><input style={inp} placeholder="VD: Km7+200" /></Field></div>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ flex: 1 }}><Field label="Số km đầu" hint="Tự động"><input style={{ ...inp, background: '#f7fafc', fontFamily: 'var(--mono)' }} value={picked ? nf(kmStart) : ''} readOnly placeholder="—" /></Field></div>
+          <div style={{ flex: 1 }}><Field label="Số km hiện tại"><input value={kmCur} onChange={e => setKmCur(e.target.value)} style={{ ...inp, fontFamily: 'var(--mono)' }} placeholder="Đồng hồ" inputMode="numeric" /></Field></div>
+        </div>
+        <Field label="Quãng đường chạy" hint="= km hiện tại − km đầu"><input style={{ ...inp, fontFamily: 'var(--mono)', fontWeight: 700, color: BLUE }} value={nf(dist) + ' km'} readOnly /></Field>
+        <div style={{ background: '#f7fafc', border: '1px solid #e4e9ee', borderRadius: 12, padding: 12, marginBottom: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="truck" size={14} style={{ color: ORANGE }} />Khối lượng vận chuyển</div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ flex: 1 }}><div style={{ fontSize: 11, color: '#6b8094', marginBottom: 4 }}>Số chuyến</div><input type="number" value={trips} onChange={e => setTrips(+e.target.value)} style={{ ...inp, height: 40, fontFamily: 'var(--mono)' }} /></div>
+            <div style={{ flex: 1 }}><div style={{ fontSize: 11, color: '#6b8094', marginBottom: 4 }}>Tải trọng/chuyến</div><input value={load + ' m³'} readOnly style={{ ...inp, height: 40, fontFamily: 'var(--mono)', background: '#fff' }} /></div>
+          </div>
+          <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 11px', background: '#fff', borderRadius: 9 }}><span style={{ fontSize: 12, color: '#6b8094' }}>Tổng khối lượng</span><b style={{ fontFamily: 'var(--mono)', color: ORANGE, fontSize: 15 }}>{nf(totalVol, 1)} m³</b></div>
+        </div>
+        <Field label="Nhiên liệu dự kiến" hint="= số chuyến × định mức"><input style={{ ...inp, background: '#f7fafc', fontFamily: 'var(--mono)', fontWeight: 700, color: ORANGE }} value={fuelEst + ' L'} readOnly /></Field>
+        <Field label="Dầu Diesel tiêu thụ thực tế (L)"><input style={{ ...inp, fontFamily: 'var(--mono)' }} placeholder="Lít" inputMode="decimal" /></Field>
+        <PhotoReq />
+        <button style={btnP} onClick={() => toast('Đã lưu nhật ký xe (offline — chờ sync)')}>Lưu nhật ký xe</button>
       </div>
     );
   }
@@ -271,7 +334,7 @@
     nhatky: { title: 'Nhật ký thi công', c: NhatKy },
     tiendo: { title: 'Cập nhật tiến độ', c: TienDo },
     duyet: { title: 'Duyệt phiếu', c: Duyet },
-    nhatkyxe: { title: 'Nhật ký xe', c: () => <Simple icon="truck" title="Nhật ký xe" text="Tổng hợp chuyến & khối lượng trong ngày." /> },
+    nhatkyxe: { title: 'Nhật ký xe', c: NhatKyXe },
     tonkho: { title: 'Tồn kho hiện trường', c: () => <Simple icon="package" title="Tồn kho hiện trường" text="Kiểm tra nhanh tồn vật tư tại công trường." /> },
     anh: { title: 'Ảnh hiện trường', c: () => <Simple icon="camera" title="Ảnh hiện trường" text="Chụp ảnh gắn vị trí GPS & thời gian." /> },
     dashboard: { title: 'Dashboard công trường', c: () => <Simple icon="dashboard" title="Dashboard công trường" text="Tiến độ, nhân sự, thiết bị hôm nay." /> },
@@ -280,7 +343,7 @@
     lichsu: { title: 'Lịch sử của tôi', c: () => <Simple icon="history" title="Lịch sử của tôi" text="Giờ máy, ca làm, sản lượng đã ghi." /> },
     bangcong: { title: 'Bảng công của tôi', c: () => <Simple icon="calendar" title="Bảng công của tôi" text="Công, tăng ca tháng này." /> },
   };
-  const NAVMETA = { home: ['Trang chủ', 'dashboard'], chamcong: ['Chấm công', 'crosshair'], quetmay: ['Nhật trình', 'excavator'], quetchuyen: ['Đếm chuyến', 'scan'], quetkho: ['Kho', 'warehouse'], kiemtb: ['Thiết bị', 'qr'], nhatky: ['Nhật ký', 'calendar'], tiendo: ['Tiến độ', 'target'], duyet: ['Duyệt', 'shield-check'] };
+  const NAVMETA = { home: ['Trang chủ', 'dashboard'], chamcong: ['Chấm công', 'crosshair'], quetmay: ['Nhật trình', 'excavator'], quetchuyen: ['Đếm chuyến', 'scan'], nhatkyxe: ['Nhật ký xe', 'truck'], quetkho: ['Kho', 'warehouse'], kiemtb: ['Thiết bị', 'qr'], nhatky: ['Nhật ký', 'calendar'], tiendo: ['Tiến độ', 'target'], duyet: ['Duyệt', 'shield-check'] };
 
   /* ---------- Login (phone + OTP + role chips) ---------- */
   function MobileLogin({ onDone }) {
@@ -340,7 +403,7 @@
         <button onClick={onExit} style={{ position: 'absolute', top: 20, left: 20, display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(255,255,255,.12)', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 14px', fontSize: 13, cursor: 'pointer' }}><Icon name="arrow-left" size={15} />Quay lại desktop</button>
         <div style={{ position: 'absolute', top: 24, right: 24, color: 'rgba(255,255,255,.55)', fontSize: 12, maxWidth: 230, textAlign: 'right' }}>App hiện trường theo vai trò — chấm công, quét QR máy/xe/kho, nhật ký, duyệt phiếu. Hỗ trợ offline (PWA).</div>
         <div style={{ transform: 'scale(.92)' }}>
-          <IOSDevice title={role ? (screen === 'home' ? 'SiteOps Field' : S.title) : 'Đăng nhập'}>
+          <IOSDevice title={role ? (screen === 'home' ? 'SiteOps Field' : screen === 'profile' ? 'Tài khoản' : (S ? S.title : '')) : 'Đăng nhập'}>
             {!role ? <MobileLogin onDone={(rk) => { setRole(rk); setScreen('home'); }} /> : (
               <div style={{ background: '#f2f5f8', minHeight: '100%', paddingBottom: 70 }}>
                 {/* offline status strip */}

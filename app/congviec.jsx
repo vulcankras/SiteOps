@@ -11,10 +11,10 @@
   ];
   const CALC = { volume: 'Theo khối lượng', percent: 'Theo %', weighted: 'Theo tỷ trọng' };
 
-  function TaskRow({ t, child, go, showProject }) {
+  function TaskRow({ t, child, go, showProject, onOpen }) {
     const proj = DB.projects.find(p => p.id === t.proj);
     return (
-      <tr className="clickable" onClick={() => go && go({ page: 'cong-truong', sub: 'detail', id: t.proj, tab: 'cong-viec' })}>
+      <tr className="clickable" onClick={() => onOpen ? onOpen(t) : (go && go({ page: 'cong-truong', sub: 'detail', id: t.proj, tab: 'cong-viec' }))}>
         <td style={{ paddingLeft: child ? 30 : 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {child ? <Icon name="chevron-right" size={12} style={{ color: 'var(--ink-300)' }} /> : <span style={{ width: 6, height: 6, borderRadius: 2, background: 'var(--blue-500)' }} />}
@@ -32,12 +32,121 @@
     );
   }
 
+  const TYPE_CFG = {
+    'Đào đất': { mode: 'volume', specs: [['Cấp đất', 'Cấp III'], ['Hệ số nở rời', '1.2']] },
+    'Đắp đất': { mode: 'volume', specs: [['Độ chặt yêu cầu', 'K95'], ['Chiều dày lớp', '30 cm']] },
+    'San nền': { mode: 'volume', specs: [['Cao độ thiết kế', 'Theo bản vẽ'], ['Độ dốc ngang', '2%']] },
+    'Lu lèn': { mode: 'volume', specs: [['Độ chặt', 'K98'], ['Số lượt lu', '8–10 lượt']] },
+    'Móng đường': { mode: 'volume', specs: [['Vật liệu', 'CPĐD loại I'], ['Mô đun đàn hồi', 'E≥200 MPa']] },
+    'Đổ bê tông': { mode: 'checklist', checklist: ['Nghiệm thu cốt thép', 'Nghiệm thu ván khuôn', 'Kiểm tra mác BT & độ sụt', 'Đổ & đầm bê tông', 'Bảo dưỡng bê tông', 'Tháo ván khuôn'] },
+    'Thoát nước': { mode: 'checklist', checklist: ['Đào hố móng', 'Bê tông lót', 'Lắp đặt cống / ống', 'Đắp trả & lu lèn', 'Hoàn thiện hố ga'] },
+    'Thi công cầu': { mode: 'checklist', checklist: ['Cọc khoan nhồi', 'Bệ trụ', 'Thân trụ', 'Lắp dầm', 'Bản mặt cầu', 'Lan can & hoàn thiện'] },
+    'Chuẩn bị': { mode: 'checklist', checklist: ['Bàn giao mốc giới', 'Dọn dẹp mặt bằng', 'Làm đường công vụ', 'Lán trại & bãi tập kết'] },
+    'Hoàn thiện': { mode: 'checklist', checklist: ['Xây tường', 'Tô trát', 'Sơn bả', 'Hoàn thiện chi tiết'] },
+  };
+  const cfgOf = (t) => TYPE_CFG[t.type] || { mode: t.calc === 'volume' ? 'volume' : 'checklist', checklist: ['Chuẩn bị', 'Thi công', 'Nghiệm thu', 'Hoàn thành'] };
+
+  function TaskActions({ t, onClose, onSub }) {
+    const [tab, setTab] = useState('detail');
+    const [st, setSt] = useState(t.status);
+    const cfg = cfgOf(t);
+    const area = DB.areas.find(a => a.id === t.area);
+    const [checks, setChecks] = useState((cfg.checklist || []).map((_, i) => i < Math.round((cfg.checklist || []).length * t.progress / 100)));
+    const volSeries = [{ color: 'var(--orange-500)', fill: 'var(--orange-500)', data: [3.2, 4.1, 3.8, 5.0, 4.5, 6.2].map(x => x * (t.planVol > 100000 ? 1000 : 10)) }];
+    const proj = DB.projects.find(p => p.id === t.proj);
+    return (
+      <Modal title={t.name} sub={t.code + ' · ' + proj.name} width={640} onClose={onClose}
+        foot={<><button className="btn" onClick={onClose}>Đóng</button>{tab !== 'detail' && <button className="btn btn-primary" onClick={() => { toast(tab === 'progress' ? 'Đã ghi nhận tiến độ' : 'Đã chuyển trạng thái'); onClose(); }}>Lưu</button>}</>}>
+        <div style={{ display: 'flex', gap: 7, marginBottom: 16, flexWrap: 'wrap' }}>
+          {[['detail', 'Xem chi tiết', 'eye'], ['progress', 'Báo cáo tiến độ', 'target'], ['status', 'Chuyển trạng thái', 'refresh'], ['sub', 'Tạo công việc con', 'plus']].map(([k, l, ic]) => (
+            <button key={k} onClick={() => k === 'sub' ? onSub() : setTab(k)} className={'btn btn-sm ' + (tab === k ? 'btn-primary' : '')}><Icon name={ic} size={14} />{l}</button>
+          ))}
+        </div>
+        {tab === 'detail' && (
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13, marginBottom: 14 }}>
+              {[['Loại công việc', t.type], ['Người thực hiện', DB.byId[t.assignee].name], ['Cách tính', { volume: 'Theo khối lượng', percent: 'Theo %', weighted: 'Theo tỷ trọng' }[t.calc]], ['Thời gian', dmy(t.start) + ' – ' + dmy(t.end)]].map(([k, v]) =>
+                <div key={k}><div className="muted" style={{ fontSize: 11 }}>{k}</div><div style={{ fontWeight: 600, fontSize: 13, marginTop: 2 }}>{v}</div></div>)}
+            </div>
+            {area && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 8, marginBottom: 14 }}>
+                <Icon name="map-pin" size={16} style={{ color: 'var(--orange-500)' }} />
+                <div style={{ flex: 1 }}><div style={{ fontWeight: 600, fontSize: 12.5 }}>{area.name}</div><div className="mono muted" style={{ fontSize: 10.5 }}>{area.kmS} → {area.kmE} · {nf(area.len)} m · {DB.byId[area.mgr].name}</div></div>
+                <div style={{ textAlign: 'right' }}><div className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{area.progress}%</div><div className="muted" style={{ fontSize: 10 }}>khu vực</div></div>
+              </div>
+            )}
+            {cfg.mode === 'volume' ? (
+              <div>
+                <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+                  <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 8, padding: '11px 13px' }}><div className="muted" style={{ fontSize: 11 }}>Khối lượng thực hiện</div><div className="mono" style={{ fontSize: 18, fontWeight: 700, color: 'var(--orange-600)' }}>{nf(t.doneVol)}<span style={{ fontSize: 12, color: 'var(--ink-400)' }}> / {nf(t.planVol)} {t.unit}</span></div></div>
+                  <div style={{ width: 130, background: 'var(--surface-2)', borderRadius: 8, padding: '11px 13px' }}><div className="muted" style={{ fontSize: 11 }}>Tiến độ</div><div className="mono" style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue-700)' }}>{t.progress}%</div></div>
+                </div>
+                {cfg.specs && <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px 14px', padding: '11px 13px', border: '1px solid var(--line)', borderRadius: 8, marginBottom: 12, fontSize: 12 }}>
+                  <div style={{ gridColumn: 'span 2', fontWeight: 700, fontSize: 11, color: 'var(--ink-500)', textTransform: 'uppercase', letterSpacing: '.03em' }}>Thông số kỹ thuật</div>
+                  {cfg.specs.map(([k, v]) => <React.Fragment key={k}><span className="muted">{k}</span><b style={{ textAlign: 'right' }}>{v}</b></React.Fragment>)}
+                </div>}
+                <div className="card" style={{ overflow: 'hidden' }}>
+                  <div className="card-head"><div className="card-title"><Icon name="cube" size={14} style={{ color: 'var(--orange-500)' }} />Sản lượng 6 ngày gần nhất</div></div>
+                  <div style={{ padding: 12 }}><window.BarChart data={volSeries[0].data.map((v, i) => ({ label: 'N' + (i + 1), value: v, color: 'var(--orange-500)' }))} height={120} unit={' ' + t.unit} /></div>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <b style={{ fontSize: 12.5 }}><Icon name="check-circle" size={14} style={{ color: 'var(--green-600)', marginRight: 5 }} />Hạng mục / Nghiệm thu</b>
+                  <span className="badge badge-blue">{checks.filter(Boolean).length}/{checks.length} · {Math.round(checks.filter(Boolean).length / checks.length * 100)}%</span>
+                </div>
+                <div className="card" style={{ overflow: 'hidden' }}>
+                  {cfg.checklist.map((item, i) => (
+                    <label key={i} onClick={() => setChecks(c => c.map((v, j) => j === i ? !v : v))} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 13px', borderBottom: i < cfg.checklist.length - 1 ? '1px solid var(--line-soft)' : 'none', cursor: 'pointer' }}>
+                      <span style={{ width: 20, height: 20, borderRadius: 6, border: '1.5px solid ' + (checks[i] ? 'var(--green-500)' : 'var(--ink-300)'), background: checks[i] ? 'var(--green-500)' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{checks[i] && <Icon name="check" size={13} style={{ color: '#fff' }} />}</span>
+                      <span style={{ fontSize: 13, fontWeight: 500, textDecoration: checks[i] ? 'line-through' : 'none', color: checks[i] ? 'var(--ink-500)' : 'var(--ink-800)' }}>{item}</span>
+                      {checks[i] && <span className="badge badge-green" style={{ marginLeft: 'auto', fontSize: 10 }}>Đạt</span>}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        {tab === 'progress' && (
+          <div>
+            <div className="auto-note" style={{ marginTop: 0, marginBottom: 14 }}><Icon name="info" size={13} />Nhập khối lượng/tỷ lệ thực hiện hôm nay — hệ thống cập nhật tiến độ & đẩy vào báo cáo, S-curve.</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
+              <window.Field label="Ngày báo cáo"><input className="input" type="date" defaultValue="2026-06-02" /></window.Field>
+              <window.Field label={t.calc === 'volume' ? 'Khối lượng hôm nay (' + t.unit + ')' : '% hoàn thành hôm nay'}><input className="input mono" placeholder={t.calc === 'volume' ? 'VD: 1.200' : 'VD: 5'} /></window.Field>
+              <window.Field label="Nội dung thực hiện" span={2}><textarea className="textarea" placeholder="Mô tả phần việc đã làm…" /></window.Field>
+              <window.Field label="Ảnh hiện trường" span={2}><div className="ph" style={{ height: 64, flexDirection: 'column', gap: 4, cursor: 'pointer' }}><Icon name="camera" size={18} /><span style={{ fontSize: 11 }}>Chụp / tải ảnh</span></div></window.Field>
+            </div>
+          </div>
+        )}
+        {tab === 'status' && (
+          <div>
+            <div className="muted" style={{ fontSize: 12, marginBottom: 10 }}>Chọn trạng thái mới cho công việc:</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {KANBAN.map(c => (
+                <label key={c.id} onClick={() => setSt(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', border: '1px solid ' + (st === c.id ? 'var(--blue-500)' : 'var(--line)'), borderRadius: 8, cursor: 'pointer', background: st === c.id ? 'var(--blue-50)' : '#fff' }}>
+                  <span style={{ width: 15, height: 15, borderRadius: '50%', border: '2px solid ' + (st === c.id ? 'var(--blue-600)' : 'var(--ink-300)'), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{st === c.id && <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--blue-600)' }} />}</span>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.color }} />
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{c.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+      </Modal>
+    );
+  }
+
   function TaskBoard({ projId, go, embedded }) {
     const [view, setView] = useState('list');
     const [create, setCreate] = useState(false);
+    const [q, setQ] = useState('');
+    const [sel, setSel] = useState(null);
     const tasks = DB.tasks.filter(t => !projId || t.proj === projId);
-    const parents = tasks.filter(t => !t.parent);
+    const match = (t) => !q || t.name.toLowerCase().includes(q.toLowerCase()) || t.code.toLowerCase().includes(q.toLowerCase());
     const childrenOf = (id) => tasks.filter(t => t.parent === id);
+    const parents = tasks.filter(t => !t.parent && (match(t) || childrenOf(t.id).some(match)));
 
     return (
       <div>
@@ -48,6 +157,7 @@
               <button className={view === 'kanban' ? 'active' : ''} onClick={() => setView('kanban')}><Icon name="kanban" size={14} />Kanban</button>
               {projId && <button className={view === 'timeline' ? 'active' : ''} onClick={() => setView('timeline')}><Icon name="timeline" size={14} />Timeline</button>}
             </div>
+            <window.Search placeholder="Tìm tên / mã công việc…" value={q} onChange={setQ} w={220} />
             <button className="chip"><Icon name="filter" size={13} />Giai đoạn</button>
             <button className="chip"><Icon name="map-pin" size={13} />Khu vực</button>
             <button className="chip"><Icon name="users" size={13} />Người thực hiện</button>
@@ -60,7 +170,7 @@
             <table className="tbl">
               <thead><tr><th>Công việc</th><th>Loại</th>{!projId && <th>Công trường</th>}<th>Người thực hiện</th><th className="num">Khối lượng</th><th>Tiến độ</th><th>Thời gian</th><th>Trạng thái</th></tr></thead>
               <tbody>
-                {parents.map(t => <React.Fragment key={t.id}><TaskRow t={t} go={go} showProject={!projId} />{childrenOf(t.id).map(c => <TaskRow key={c.id} t={c} child go={go} showProject={!projId} />)}</React.Fragment>)}
+                {parents.map(t => <React.Fragment key={t.id}><TaskRow t={t} go={go} showProject={!projId} onOpen={setSel} />{childrenOf(t.id).filter(c => match(t) || match(c)).map(c => <TaskRow key={c.id} t={c} child go={go} showProject={!projId} onOpen={setSel} />)}</React.Fragment>)}
               </tbody>
             </table>
           </div>
@@ -103,6 +213,7 @@
         {view === 'timeline' && projId && <Timeline tasks={parents} childrenOf={childrenOf} />}
 
         {create && <CreateTask projId={projId} onClose={() => setCreate(false)} />}
+        {sel && <TaskActions t={sel} onClose={() => setSel(null)} onSub={() => { setSel(null); setCreate(true); }} />}
       </div>
     );
   }

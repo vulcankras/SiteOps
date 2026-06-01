@@ -328,25 +328,27 @@
     );
   }
 
-  function CTDetail({ id, go, role, initTab }) {
+  function CTDetail({ id, go, role, initTab, siteScoped }) {
     const p = DB.projects.find(x => x.id === id);
     const visTabs = TABS.filter(t => window.PERM ? window.PERM.canTab(role, t.id) : (!t.roles || t.roles.includes(role)));
-    const [tab, setTab] = useState(initTab && visTabs.some(t => t.id === initTab) ? initTab : 'tong-quan');
+    const [tabState, setTab] = useState(initTab && visTabs.some(t => t.id === initTab) ? initTab : 'tong-quan');
+    const tab = siteScoped ? (initTab && visTabs.some(t => t.id === initTab) ? initTab : 'tong-quan') : tabState;
     const tpl = DB.templates.find(t => t.id === p.template);
     const readOnly = role === 'watch' || role === 'pm';
     const [modal, setModal] = useState(null);
     const [navStyle, setNavStyle] = useState('left');
     React.useEffect(() => {
+      if (siteScoped) { if (window.__setMini) window.__setMini(false); return; }
       if (window.__setMini) window.__setMini(navStyle === 'left');
       return () => { if (window.__setMini) window.__setMini(false); };
-    }, [navStyle]);
+    }, [navStyle, siteScoped]);
 
     return (
       <div>
         {/* sticky header */}
         <div style={{ background: '#fff', borderBottom: '1px solid var(--line)', position: 'sticky', top: 0, zIndex: 40 }}>
           <div style={{ padding: '14px 22px 14px', maxWidth: 1640, margin: '0 auto' }}>
-            <div className="crumbs"><a onClick={() => go({ page: 'dashboard' })} style={{ cursor: 'pointer' }}>Trang chủ</a><Icon name="chevron-right" size={12} /><a onClick={() => go({ page: 'cong-truong' })} style={{ cursor: 'pointer' }}>Công trường</a><Icon name="chevron-right" size={12} /><span>{p.name}</span></div>
+            {!siteScoped && <div className="crumbs"><a onClick={() => go({ page: 'dashboard' })} style={{ cursor: 'pointer' }}>Trang chủ</a><Icon name="chevron-right" size={12} /><a onClick={() => go({ page: 'cong-truong' })} style={{ cursor: 'pointer' }}>Công trường</a><Icon name="chevron-right" size={12} /><span>{p.name}</span></div>}
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 12 }}>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                 <span style={{ width: 42, height: 42, borderRadius: 10, background: tpl.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name={tpl.icon} size={22} /></span>
@@ -365,10 +367,10 @@
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <div className="seg" title="Bố cục điều hướng">
+                {!siteScoped && <div className="seg" title="Bố cục điều hướng">
                   <button className={navStyle === 'left' ? 'active' : ''} onClick={() => setNavStyle('left')}><Icon name="list" size={13} />Menu dọc</button>
                   <button className={navStyle === 'top' ? 'active' : ''} onClick={() => setNavStyle('top')}><Icon name="kanban" size={13} style={{ transform: 'rotate(90deg)' }} />Tab nhóm</button>
-                </div>
+                </div>}
                 <button className="btn btn-sm"><Icon name="link" size={14} />Liên kết đối tượng</button>
                 <button className="btn btn-sm"><Icon name="download" size={14} />Xuất báo cáo</button>
                 <window.Menu align="right" trigger={<button className="btn btn-sm btn-icon"><Icon name="more-h" size={16} /></button>} items={[{ label: 'Cấu hình dự án', icon: 'settings', onClick: () => setModal('config') }, { label: 'Quản lý quyền', icon: 'shield-check', onClick: () => setModal('perm') }, { sep: true }, { label: 'Tạm dừng dự án', icon: 'stop', danger: true, onClick: () => window.toast && window.toast('Đã chuyển dự án sang Tạm dừng (demo)', 'warn') }]} />
@@ -377,9 +379,9 @@
           </div>
         </div>
 
-        {navStyle === 'top' && <GroupedTopNav tab={tab} setTab={setTab} visTabs={visTabs} />}
+        {!siteScoped && navStyle === 'top' && <GroupedTopNav tab={tab} setTab={setTab} visTabs={visTabs} />}
         <div style={{ display: 'flex', maxWidth: 1640, margin: '0 auto', alignItems: 'flex-start' }}>
-          {navStyle === 'left' && <aside style={{ width: 214, flex: 'none', position: 'sticky', top: 84, alignSelf: 'flex-start', padding: '16px 10px 40px 18px' }}>
+          {!siteScoped && navStyle === 'left' && <aside style={{ width: 214, flex: 'none', position: 'sticky', top: 84, alignSelf: 'flex-start', padding: '16px 10px 40px 18px' }}>
             {NAVGROUPS.map((grp, gi) => {
               const items = grp.ids.map(id => visTabs.find(t => t.id === id)).filter(Boolean);
               if (!items.length) return null;
@@ -402,8 +404,8 @@
               );
             })}
           </aside>}
-          <div className="grow" style={{ minWidth: 0, padding: '18px 22px 60px', borderLeft: navStyle === 'left' ? '1px solid var(--line)' : 'none' }}>
-            {tab === 'tong-quan' && <Overview p={p} go={go} />}
+          <div className="grow" style={{ minWidth: 0, padding: '18px 22px 60px', borderLeft: (!siteScoped && navStyle === 'left') ? '1px solid var(--line)' : 'none' }}>
+            {tab === 'tong-quan' && (siteScoped && window.SiteRoleDash && ['site', 'kt', 'exec'].includes(role) ? <window.SiteRoleDash role={role} p={p} go={go} /> : <Overview p={p} go={go} />)}
             {tab !== 'tong-quan' && window.CTTabs && <window.CTTabs tab={tab} p={p} role={role} go={go} />}
           </div>
         </div>

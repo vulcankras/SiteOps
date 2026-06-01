@@ -16,7 +16,9 @@
     );
   }
 
-  function Dashboard({ go, scope: userScope }) {
+  function Dashboard({ go, scope: userScope, role }) {
+    if (role === 'wh' && window.WhDashboard) return <window.WhDashboard go={go} />;
+    if (role === 'acc' && window.AccDashboard) return <window.AccDashboard go={go} />;
     const [edit, setEdit] = useState(false);
     const [scope, setScope] = useState('all');
     const dashProjects = DB.projects.filter(p => !userScope || userScope === 'company' || p.id === userScope);
