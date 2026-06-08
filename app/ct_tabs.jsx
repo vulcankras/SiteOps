@@ -112,6 +112,46 @@
     );
   }
 
+  /* ============ Báo cáo hao hụt ============ */
+  function HaoHut({ p }) {
+    const rows = [
+      { name: 'Đất đắp K95', unit: 'm³', plan: 320000, actual: 332800, allow: 3 },
+      { name: 'Cấp phối đá dăm (CPĐD)', unit: 'm³', plan: 48500, actual: 50900, allow: 4 },
+      { name: 'Bê tông thương phẩm M300', unit: 'm³', plan: 6200, actual: 6510, allow: 2 },
+      { name: 'Cát vàng', unit: 'm³', plan: 12400, actual: 13380, allow: 5 },
+      { name: 'Xi măng PCB40', unit: 'tấn', plan: 1850, actual: 1905, allow: 2 },
+      { name: 'Thép D≥10', unit: 'tấn', plan: 420, actual: 426, allow: 1.5 },
+    ];
+    const tot = rows.reduce((a, r) => { const loss = r.actual - r.plan; a.plan += r.plan; a.over += loss > 0 ? loss : 0; return a; }, { plan: 0, over: 0 });
+    return (
+      <div>
+        <div className="auto-note" style={{ marginTop: 0, marginBottom: 14 }}><Icon name="info" size={13} />So sánh <b>Khối lượng dự toán</b> (QL công trường nhập) với <b>Khối lượng thực tế</b> sử dụng (từ nhật ký thi công, phiếu đặt bê tông & xuất kho). Vượt định mức cho phép sẽ bị tô đỏ.</div>
+        <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: 14 }}>
+          <window.Stat label="Số hạng mục vượt định mức" icon="alert" value={rows.filter(r => (r.actual - r.plan) / r.plan * 100 > r.allow).length} unit={'/' + rows.length} edge="var(--red-500)" />
+          <window.Stat label="Tỷ lệ hao hụt bình quân" icon="chart" value={nf(rows.reduce((s, r) => s + (r.actual - r.plan) / r.plan * 100, 0) / rows.length, 1)} unit="%" edge="var(--orange-500)" />
+          <window.Stat label="Giá trị vượt ước tính" icon="wallet" value="~1.6" unit="tỷ ₫" edge="var(--violet-500)" />
+        </div>
+        <div className="card" style={{ overflow: 'auto' }}>
+          <div className="card-head"><div className="card-title"><Icon name="chart" size={15} style={{ color: 'var(--orange-500)' }} />Báo cáo hao hụt vật liệu — {p.name}</div></div>
+          <table className="tbl tbl-compact">
+            <thead><tr><th>Vật liệu</th><th>ĐVT</th><th className="num">KL dự toán</th><th className="num">KL thực tế</th><th className="num">Hao hụt</th><th className="num">% hao hụt</th><th className="num">Định mức CP</th><th>Đánh giá</th></tr></thead>
+            <tbody>{rows.map((r, i) => {
+              const loss = r.actual - r.plan, pct = loss / r.plan * 100, over = pct > r.allow;
+              return <tr key={i} style={over ? { background: 'var(--red-50)' } : null}>
+                <td style={{ fontWeight: 600 }}>{r.name}</td><td>{r.unit}</td>
+                <td className="num mono">{nf(r.plan)}</td><td className="num mono">{nf(r.actual)}</td>
+                <td className="num mono" style={{ color: loss > 0 ? 'var(--red-600)' : 'var(--green-600)' }}>{loss > 0 ? '+' : ''}{nf(loss)}</td>
+                <td className="num"><b style={{ color: over ? 'var(--red-600)' : 'var(--ink-800)' }}>{pct > 0 ? '+' : ''}{nf(pct, 1)}%</b></td>
+                <td className="num muted">≤ {nf(r.allow, 1)}%</td>
+                <td>{over ? <span className="badge badge-red">Vượt định mức</span> : <span className="badge badge-green">Trong định mức</span>}</td>
+              </tr>;
+            })}</tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
   /* ============ Nhật ký hàng ngày ============ */
   function NhatKy({ p }) {
     const [sub, setSub] = useState('thi-cong');
@@ -119,11 +159,12 @@
       <div>
         <SectionHead title="Nhật ký hàng ngày" sub="Ghi nhận thi công, máy và xe vận chuyển tại công trường" icon="calendar" />
         <div style={{ marginBottom: 14 }}>
-          <Tabs tabs={[{ id: 'thi-cong', label: 'Nhật ký thi công', icon: 'file', count: DB.siteLogs.length }, { id: 'may', label: 'Nhật trình máy', icon: 'excavator', count: DB.machineLogs.length }, { id: 'xe', label: 'Nhật ký xe', icon: 'truck', count: DB.vehicleLogs.length }]} active={sub} onChange={setSub} />
+          <Tabs tabs={[{ id: 'thi-cong', label: 'Nhật ký thi công', icon: 'file', count: DB.siteLogs.length }, { id: 'may', label: 'Nhật trình máy', icon: 'excavator', count: DB.machineLogs.length }, { id: 'xe', label: 'Nhật ký xe', icon: 'truck', count: DB.vehicleLogs.length }, { id: 'hao-hut', label: 'Báo cáo hao hụt', icon: 'chart' }]} active={sub} onChange={setSub} />
         </div>
         {sub === 'thi-cong' && <SiteLog />}
         {sub === 'may' && <MachineLog />}
         {sub === 'xe' && <VehicleLog />}
+        {sub === 'hao-hut' && <HaoHut p={p} />}
       </div>
     );
   }

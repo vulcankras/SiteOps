@@ -278,15 +278,15 @@
 
   /* ============ Đơn từ & Tăng ca ============ */
   function DonTu({ go, scope }) {
-    const [tab, setTab] = useState('ot');
+    const [tab, setTab] = useState('leave');
     const [site, setSite] = useSite(scope);
     const company = !scope || scope === 'company';
     const ot = DB.overtime.filter(o => inSite(o.person, site));
     return (
       <Page go={go} title="Đơn từ & Tăng ca" label="Đơn từ & Tăng ca">
         <div style={{ marginBottom: 12 }}><SiteFilter scope={scope} value={site} onChange={setSite} /></div>
-        <div style={{ marginBottom: 14 }}><Tabs tabs={[{ id: 'ot', label: 'Phiếu tăng ca', icon: 'clock', count: ot.length }, { id: 'leave', label: 'Đơn nghỉ phép', icon: 'calendar', count: 2 }]} active={tab} onChange={setTab} /></div>
-        {tab === 'ot' ? (
+        <div style={{ marginBottom: 14 }}><Tabs tabs={[{ id: 'leave', label: 'Đơn xin nghỉ', icon: 'calendar', count: 2 }, { id: 'ot', label: 'Đơn tăng ca', icon: 'clock', count: ot.length }, { id: 'bu', label: 'Đơn làm bù', icon: 'refresh', count: 2 }, { id: 'doi-tb', label: 'Đơn đổi thiết bị', icon: 'excavator', count: 2 }]} active={tab} onChange={setTab} /></div>
+        {tab === 'ot' && (
           <div className="card" style={{ overflow: 'hidden' }}>
             <table className="tbl"><thead><tr><th>Ngày</th><th>Người tăng ca</th>{company && <th>Công trường</th>}<th>Thiết bị</th><th>Nội dung</th><th>Thời gian</th><th className="num">Số giờ</th><th>Trạng thái</th></tr></thead>
               <tbody>{ot.map(o => { const e = DB.equipment.find(x => x.id === o.equip); return (
@@ -303,12 +303,35 @@
               ); })}</tbody>
             </table>
           </div>
-        ) : (
+        )}
+        {tab === 'leave' && (
           <div className="card" style={{ overflow: 'hidden' }}>
             <table className="tbl"><thead><tr><th>Người gửi</th>{company && <th>Công trường</th>}<th>Loại đơn</th><th>Từ ngày</th><th>Đến ngày</th><th>Lý do</th><th>Trạng thái</th></tr></thead>
               <tbody>
                 <tr><td><div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Avatar id="u5" size="av-sm" />Phạm Minh Đức</div></td>{company && <td><SiteTag pid="u5" /></td>}<td>Nghỉ phép năm</td><td className="mono">18/05/2026</td><td className="mono">19/05/2026</td><td className="muted">Việc gia đình</td><td><Badge map={DOC_ST} k="pending" /></td></tr>
                 <tr><td><div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Avatar id="u8" size="av-sm" />Đỗ Thị Mai</div></td>{company && <td><SiteTag pid="u8" /></td>}<td>Nghỉ ốm</td><td className="mono">14/05/2026</td><td className="mono">14/05/2026</td><td className="muted">Khám bệnh</td><td><Badge map={DOC_ST} k="approved" /></td></tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+        {tab === 'bu' && (
+          <div className="card" style={{ overflow: 'hidden' }}>
+            <div className="auto-note" style={{ margin: 12 }}><Icon name="info" size={13} />Đơn làm bù cho ngày nghỉ lễ/chủ nhật đã đi làm — quy đổi sang ngày công bù hoặc lương ×200%.</div>
+            <table className="tbl"><thead><tr><th>Người gửi</th>{company && <th>Công trường</th>}<th>Ngày làm bù</th><th>Bù cho ngày</th><th className="num">Số công</th><th>Lý do</th><th>Trạng thái</th></tr></thead>
+              <tbody>
+                <tr><td><div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Avatar id="u6" size="av-sm" />Hoàng Văn Hải</div></td>{company && <td><SiteTag pid="u6" /></td>}<td className="mono">11/05/2026 (CN)</td><td className="mono">02/05/2026</td><td className="num"><b>1.0</b></td><td className="muted">Đi làm CN, xin nghỉ bù lễ</td><td><div style={{ display: 'flex', gap: 5 }}><button className="btn btn-sm" style={{ height: 24, padding: '0 8px', borderColor: 'var(--green-500)', color: 'var(--green-600)' }} onClick={() => toast('Đã duyệt đơn làm bù')}>Duyệt</button><button className="btn btn-sm btn-ghost" style={{ height: 24, padding: '0 8px' }}>Từ chối</button></div></td></tr>
+                <tr><td><div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Avatar id="u7" size="av-sm" />Lý Văn Phúc</div></td>{company && <td><SiteTag pid="u7" /></td>}<td className="mono">04/05/2026 (CN)</td><td className="mono">30/04/2026</td><td className="num"><b>1.0</b></td><td className="muted">Tăng ca lễ 30/4</td><td><Badge map={DOC_ST} k="approved" /></td></tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+        {tab === 'doi-tb' && (
+          <div className="card" style={{ overflow: 'hidden' }}>
+            <div className="auto-note" style={{ margin: 12 }}><Icon name="info" size={13} />Đơn đề nghị đổi/điều chuyển thiết bị giữa người vận hành hoặc công trường — duyệt xong tự cập nhật gán thiết bị.</div>
+            <table className="tbl"><thead><tr><th>Người đề nghị</th>{company && <th>Công trường</th>}<th>Thiết bị</th><th>Từ → đến</th><th>Lý do</th><th>Ngày</th><th>Trạng thái</th></tr></thead>
+              <tbody>
+                <tr><td><div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Avatar id="u4" size="av-sm" />Trần Văn Cường</div></td>{company && <td><SiteTag pid="u4" /></td>}<td style={{ fontSize: 12 }}>Lu rung XCMG (Lu 4.1)</td><td style={{ fontSize: 12 }}>Lý V. Phúc → Hoàng V. Hải</td><td className="muted">Phúc nghỉ phép 2 ngày</td><td className="mono">15/05/2026</td><td><div style={{ display: 'flex', gap: 5 }}><button className="btn btn-sm" style={{ height: 24, padding: '0 8px', borderColor: 'var(--green-500)', color: 'var(--green-600)' }} onClick={() => toast('Đã duyệt & cập nhật gán thiết bị')}>Duyệt</button><button className="btn btn-sm btn-ghost" style={{ height: 24, padding: '0 8px' }}>Từ chối</button></div></td></tr>
+                <tr><td><div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Avatar id="u5" size="av-sm" />Phạm Minh Đức</div></td>{company && <td><SiteTag pid="u5" /></td>}<td style={{ fontSize: 12 }}>Xe Howo 3 chân (Xe 57)</td><td style={{ fontSize: 12 }}>HN–Chi Lăng → Đồng Văn</td><td className="muted">Điều phối tăng cường</td><td className="mono">13/05/2026</td><td><Badge map={DOC_ST} k="approved" /></td></tr>
               </tbody>
             </table>
           </div>

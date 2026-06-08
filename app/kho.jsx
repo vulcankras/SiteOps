@@ -58,8 +58,19 @@
   /* ---------- Nhập kho ---------- */
   function NhapKho({ go }) {
     const [modal, setModal] = useState(false);
+    const [tab, setTab] = useState('phieu');
+    const [dxModal, setDxModal] = useState(false);
+    const proposals = [
+      { id: 'DX-202605-007', by: 'u8', date: '2026-05-15', wh: 'wh1', items: 'Dầu DO 5.000L · Thép D12 8 tấn', need: '18/05', total: 268, status: 'pending', reason: 'Phục vụ đổ bê tông mố cầu IC3' },
+      { id: 'DX-202605-006', by: 'u3', date: '2026-05-14', wh: 'wh1', items: 'CPĐD loại I 1.200 m³', need: '16/05', total: 312, status: 'approved', reason: 'Thi công móng đường Km5–Km6' },
+      { id: 'DX-202605-005', by: 'u8', date: '2026-05-12', wh: 'wh2', items: 'Xi măng PCB40 200 bao', need: '15/05', total: 34, status: 'rejected', reason: 'Tồn kho còn đủ' },
+    ];
     return (
-      <Page go={go} title="Nhập kho" label="Nhập kho" right={<button className="btn btn-sm btn-primary" onClick={() => setModal(true)}><Icon name="plus" size={14} />Tạo phiếu nhập</button>}>
+      <Page go={go} title="Nhập kho" label="Nhập kho" right={tab === 'phieu'
+        ? <button className="btn btn-sm btn-primary" onClick={() => setModal(true)}><Icon name="plus" size={14} />Tạo phiếu nhập</button>
+        : <button className="btn btn-sm btn-primary" onClick={() => setDxModal(true)}><Icon name="plus" size={14} />Tạo đề xuất</button>}>
+        <div style={{ marginBottom: 14 }}><Tabs tabs={[{ id: 'phieu', label: 'Phiếu nhập kho', icon: 'download', count: DB.receipts.length }, { id: 'de-xuat', label: 'Đề xuất nhập kho', icon: 'file', count: proposals.filter(p => p.status === 'pending').length }]} active={tab} onChange={setTab} /></div>
+        {tab === 'phieu' && <>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}><Search placeholder="Tìm mã phiếu…" /><button className="chip"><Icon name="filter" size={13} />Loại phiếu</button><button className="chip"><Icon name="flag" size={13} />Trạng thái</button></div>
         <div className="card" style={{ overflow: 'hidden' }}>
           <table className="tbl"><thead><tr><th>Mã phiếu</th><th>Loại nhập</th><th>Nguồn</th><th>Kho đích</th><th>Nhà cung cấp</th><th>Ngày</th><th className="num">Giá trị</th><th>Người tạo</th><th>Trạng thái</th></tr></thead>
@@ -76,7 +87,40 @@
             </tr>)}</tbody>
           </table>
         </div>
+        </>}
+        {tab === 'de-xuat' && <>
+          <div className="auto-note" style={{ marginTop: 0, marginBottom: 12 }}><Icon name="info" size={13} />Đề xuất nhập kho do công trường/cán bộ vật tư lập, gửi duyệt. Sau khi duyệt sẽ chuyển thành phiếu nhập kho.</div>
+          <div className="card" style={{ overflow: 'hidden' }}>
+            <table className="tbl"><thead><tr><th>Mã đề xuất</th><th>Nội dung</th><th>Kho đích</th><th>Cần trước</th><th className="num">Ước tính</th><th>Người đề xuất</th><th>Trạng thái</th><th></th></tr></thead>
+              <tbody>{proposals.map(d => <tr key={d.id} className="clickable">
+                <td className="mono" style={{ fontWeight: 600 }}>{d.id}</td>
+                <td style={{ fontSize: 12, maxWidth: 240 }}>{d.items}<div className="muted" style={{ fontSize: 10.5 }}>{d.reason}</div></td>
+                <td style={{ fontSize: 12 }}>{DB.warehouses.find(w => w.id === d.wh)?.name}</td>
+                <td className="mono" style={{ fontSize: 12 }}>{d.need}</td>
+                <td className="num">{nf(d.total)} tr</td>
+                <td><Avatar id={d.by} size="av-sm" /></td>
+                <td><Badge map={DOC_ST} k={d.status} /></td>
+                <td style={{ textAlign: 'right' }}>{d.status === 'pending'
+                  ? <div style={{ display: 'flex', gap: 5, justifyContent: 'flex-end' }}><button className="btn btn-sm" style={{ height: 24, padding: '0 8px', borderColor: 'var(--green-500)', color: 'var(--green-600)' }} onClick={() => toast('Đã duyệt → chuyển thành phiếu nhập')}>Duyệt</button><button className="btn btn-sm btn-ghost" style={{ height: 24, padding: '0 8px' }}>Từ chối</button></div>
+                  : d.status === 'approved' ? <button className="btn btn-sm" style={{ height: 24, padding: '0 9px' }} onClick={() => setModal(true)}>Tạo phiếu nhập</button> : null}</td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+        </>}
         {modal && <NhapForm onClose={() => setModal(false)} />}
+        {dxModal && <Modal title="Tạo đề xuất nhập kho" sub="Đề nghị bổ sung vật tư / thiết bị về kho" width={640} onClose={() => setDxModal(false)}
+          foot={<><button className="btn" onClick={() => setDxModal(false)}>Huỷ</button><button className="btn btn-primary" onClick={() => { toast('Đã gửi đề xuất duyệt'); setDxModal(false); }}><Icon name="check" size={14} />Gửi duyệt</button></>}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
+            <Field label="Kho đích" req><select className="select">{DB.warehouses.map(w => <option key={w.id}>{w.name}</option>)}</select></Field>
+            <Field label="Cần trước ngày" req><input className="input" type="date" defaultValue="2026-05-18" /></Field>
+            <Field label="Hạng mục / Lý do" req span={2}><input className="input" placeholder="VD: Phục vụ đổ bê tông mố cầu IC3" /></Field>
+          </div>
+          <div className="divider" style={{ margin: '14px 0' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 9 }}><b style={{ fontSize: 12.5 }}>Danh mục đề xuất</b><button className="btn btn-sm"><Icon name="plus" size={13} />Thêm dòng</button></div>
+          <table className="tbl tbl-compact"><thead><tr><th>Vật tư / Thiết bị</th><th>ĐVT</th><th className="num">SL đề xuất</th><th className="num">Đơn giá ước tính</th></tr></thead>
+            <tbody><tr><td><select className="select" style={{ height: 28 }}>{DB.materials.map(m => <option key={m.id}>{m.name}</option>)}</select></td><td>m³</td><td className="num"><input className="input mono" style={{ height: 28, width: 80 }} defaultValue="1.200" /></td><td className="num"><input className="input mono" style={{ height: 28, width: 90 }} defaultValue="260.000" /></td></tr></tbody>
+          </table>
+        </Modal>}
       </Page>
     );
   }
