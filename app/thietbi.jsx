@@ -170,13 +170,45 @@
           </div>
         </div>
         <div style={{ marginBottom: 16 }}>
-          <Tabs tabs={[{ id: 'info', label: 'Thông tin chung', icon: 'info' }, { id: 'van-hanh', label: 'Lịch sử vận hành', icon: 'history' }, { id: 'nhien-lieu', label: 'Nhiên liệu', icon: 'fuel' }, { id: 'sua-chua', label: 'Sửa chữa', icon: 'wrench' }, { id: 'luan-chuyen', label: 'Lịch sử luân chuyển', icon: 'refresh' }]} active={tab} onChange={setTab} />
+          <Tabs tabs={[{ id: 'info', label: 'Thông tin chung', icon: 'info' }, { id: 'toan-trinh', label: 'Toàn trình', icon: 'timeline' }, { id: 'van-hanh', label: 'Lịch sử vận hành', icon: 'history' }, { id: 'nhien-lieu', label: 'Nhiên liệu', icon: 'fuel' }, { id: 'sua-chua', label: 'Sửa chữa', icon: 'wrench' }, { id: 'luan-chuyen', label: 'Lịch sử luân chuyển', icon: 'refresh' }]} active={tab} onChange={setTab} />
         </div>
         {tab === 'info' && <Info e={e} />}
+        {tab === 'toan-trinh' && <ToanTrinh e={e} />}
         {tab === 'van-hanh' && <VanHanh e={e} />}
         {tab === 'nhien-lieu' && <NhienLieu e={e} />}
         {tab === 'sua-chua' && <SuaChuaTab e={e} />}
         {tab === 'luan-chuyen' && <LuanChuyen e={e} />}
+      </div>
+    );
+  }
+
+  function ToanTrinh({ e }) {
+    const ev = (DB.equipTimeline ? DB.equipTimeline(e.id) : []);
+    const cur = DB.projects.find(x => x.id === e.loc);
+    return (
+      <div>
+        {cur && <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 14px', border: '1px solid var(--line)', borderLeft: '3px solid var(--orange-500)', borderRadius: 8, marginBottom: 16, background: 'var(--orange-50)' }}>
+          <Icon name="map-pin" size={17} style={{ color: 'var(--orange-600)' }} />
+          <div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: 13 }}>Đang sử dụng tại: {cur.name}</div><div className="mono" style={{ fontSize: 11, color: 'var(--ink-600)' }}>{cur.code} · {cur.location} · người VH: {e.driver ? DB.byId[e.driver].name : '—'}</div></div>
+          <span className="badge badge-orange">Công trường hiện hữu</span>
+        </div>}
+        <div className="card" style={{ padding: 18 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink-700)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 7 }}><Icon name="timeline" size={15} style={{ color: 'var(--blue-600)' }} />Toàn trình lịch sử thiết bị</div>
+          <div style={{ position: 'relative', marginLeft: 8 }}>
+            <div style={{ position: 'absolute', left: 11, top: 4, bottom: 4, width: 2, background: 'var(--line)' }} />
+            {ev.map((x, i) => (
+              <div key={i} style={{ display: 'flex', gap: 14, marginBottom: 16, position: 'relative' }}>
+                <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#fff', border: '2px solid ' + x.color, color: x.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none', zIndex: 1 }}><Icon name={x.icon} size={13} /></span>
+                <div style={{ flex: 1, paddingTop: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}><b style={{ fontSize: 13 }}>{x.title}</b><span className="mono" style={{ fontSize: 11, color: 'var(--ink-500)' }}>{dmy(x.date)}</span></div>
+                  <div style={{ fontSize: 12.5, color: 'var(--ink-600)', marginTop: 2 }}>{x.desc}</div>
+                  {x.meta && <div className="mono" style={{ fontSize: 10.5, color: 'var(--ink-400)', marginTop: 2 }}>{x.meta}</div>}
+                </div>
+              </div>
+            ))}
+            {!ev.length && <div style={{ textAlign: 'center', padding: 24, color: 'var(--ink-400)' }}>Chưa có dữ liệu lịch sử</div>}
+          </div>
+        </div>
       </div>
     );
   }

@@ -66,7 +66,8 @@
       { id: 'tai-chinh', label: 'Tài chính', icon: 'wallet', tab: 'tai-chinh' },
     ] },
     { label: 'Hồ sơ & Báo cáo', items: [
-      { id: 'bao-cao', label: 'Báo cáo', icon: 'report', tab: 'bao-cao' },
+      { id: 'bao-cao', label: 'Báo cáo vận hành', icon: 'report', tab: 'bao-cao' },
+      { id: 'canh-bao', label: 'Cảnh báo', icon: 'alert', tab: 'canh-bao' },
       { id: 'ho-so', label: 'Hồ sơ - Tài liệu', icon: 'folder', tab: 'ho-so' },
     ] },
   ];

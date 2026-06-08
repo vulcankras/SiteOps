@@ -677,19 +677,20 @@
     );
   }
 
-  function CTTabs({ tab, p, role, go }) {
+  function CTTabs({ tab, p, role, go, onTab }) {
     switch (tab) {
       case 'cong-viec': return <window.TaskBoard projId={p.id} go={go} embedded />;
       case 'tien-do': return window.TienDo ? <window.TienDo projId={p.id} /> : null;
       case 'khu-vuc': return <KhuVuc p={p} go={go} />;
       case 'nhat-ky': return <NhatKy p={p} />;
       case 'vat-lieu-do': return <VatLieuDo p={p} />;
-      case 'thiet-bi': return <ThietBiTab p={p} go={go} />;
+      case 'thiet-bi': return window.SiteThietBi ? <window.SiteThietBi p={p} go={go} /> : <ThietBiTab p={p} go={go} />;
       case 'ton-kho': return <TonKhoTab p={p} />;
-      case 'nhan-su': return <NhanSuTab p={p} go={go} />;
+      case 'nhan-su': return window.SiteNhanSu ? <window.SiteNhanSu p={p} go={go} /> : <NhanSuTab p={p} go={go} />;
       case 'goi-thau': return <GoiThau p={p} />;
       case 'tai-chinh': return <TaiChinh p={p} />;
-      case 'bao-cao': return <BaoCaoTab p={p} />;
+      case 'bao-cao': return window.SiteBaoCao ? <window.SiteBaoCao p={p} /> : <BaoCaoTab p={p} />;
+      case 'canh-bao': return window.SiteAlerts ? <window.SiteAlerts p={p} go={go} onTab={onTab} /> : null;
       case 'ho-so': return <HoSo p={p} />;
       default: return null;
     }

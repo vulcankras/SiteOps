@@ -14,23 +14,40 @@
     const [tab, setTab] = useState('all');
     const [view, setView] = useState('table');
     const [create, setCreate] = useState(false);
+    const [q, setQ] = useState('');
+    const [fOwn, setFOwn] = useState('all');
+    const [fKind, setFKind] = useState('all');
+    const [fGroup, setFGroup] = useState('all');
+    const [fStatus, setFStatus] = useState('all');
     const filter = (e) => tab === 'all' ? true : tab === 'site' ? (e.loc && e.loc.startsWith('p')) : tab === 'own' ? e.own === 'own' : tab === 'rented' ? e.own === 'rented' : tab === 'rented-out' ? e.status === 'rented-out' : e.status === tab;
-    const list = DB.equipment.filter(filter);
+    const list = DB.equipment.filter(e => filter(e)
+      && (fOwn === 'all' || (fOwn === 'own' ? e.own === 'own' : e.own !== 'own'))
+      && (fKind === 'all' || e.kind === fKind)
+      && (fGroup === 'all' || e.group === fGroup)
+      && (fStatus === 'all' || e.status === fStatus)
+      && (!q || e.name.toLowerCase().includes(q.toLowerCase()) || e.code.toLowerCase().includes(q.toLowerCase()) || (e.plate || '').includes(q) || (e.series || '').toLowerCase().includes(q.toLowerCase())));
     const counts = (id) => DB.equipment.filter(e => id === 'all' ? true : id === 'site' ? (e.loc && e.loc.startsWith('p')) : id === 'own' ? e.own === 'own' : id === 'rented' ? e.own === 'rented' : id === 'rented-out' ? e.status === 'rented-out' : e.status === id).length;
+    const groups = fKind === 'vehicle' ? DB.equipGroups.vehicle : fKind === 'machine' ? DB.equipGroups.machine : [...DB.equipGroups.machine, ...DB.equipGroups.vehicle];
+    const FS = ({ value, onChange, opts }) => <select className="select" style={{ height: 32, width: 'auto', minWidth: 124 }} value={value} onChange={e => onChange(e.target.value)}>{opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>;
     return (
       <Page go={go} title="Thiết bị" label="Thiết bị" right={<button className="btn btn-sm btn-primary" onClick={() => setCreate(true)}><Icon name="plus" size={14} />Tạo thiết bị</button>}>
         <div style={{ marginBottom: 14 }}><Tabs tabs={EQ_TABS.map(t => ({ ...t, count: counts(t.id) }))} active={tab} onChange={setTab} scroll /></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div style={{ display: 'flex', gap: 8 }}><Search placeholder="Tìm mã, series, biển số…" w={250} /><button className="chip"><Icon name="filter" size={13} />Loại thiết bị</button><button className="chip"><Icon name="map-pin" size={13} />Vị trí</button></div>
-          <div className="seg"><button className={view === 'table' ? 'active' : ''} onClick={() => setView('table')}><Icon name="list" size={14} /></button><button className={view === 'card' ? 'active' : ''} onClick={() => setView('card')}><Icon name="grid" size={14} /></button></div>
+        <div className="card" style={{ padding: 12, marginBottom: 12, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Search placeholder="Tìm mã, series, biển số…" value={q} onChange={setQ} w={210} />
+          <FS value={fOwn} onChange={setFOwn} opts={[['all', 'Tất cả nguồn'], ['own', 'Sở hữu'], ['rented', 'Thuê ngoài']]} />
+          <FS value={fKind} onChange={v => { setFKind(v); setFGroup('all'); }} opts={[['all', 'Tất cả loại'], ['machine', 'Máy thi công'], ['vehicle', 'Xe vận tải']]} />
+          <FS value={fGroup} onChange={setFGroup} opts={[['all', 'Tất cả nhóm'], ...groups]} />
+          <FS value={fStatus} onChange={setFStatus} opts={[['all', 'Tất cả tình trạng'], ['running', 'Đang chạy'], ['idle', 'Chờ việc'], ['maintenance', 'Bảo trì'], ['rented-out', 'Cho thuê'], ['liquidated', 'Thanh lý']]} />
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}><span style={{ fontSize: 12, color: 'var(--ink-500)' }}>{list.length} TB</span><div className="seg"><button className={view === 'table' ? 'active' : ''} onClick={() => setView('table')}><Icon name="list" size={14} /></button><button className={view === 'card' ? 'active' : ''} onClick={() => setView('card')}><Icon name="grid" size={14} /></button></div></div>
         </div>
         {view === 'table' ? (
           <div className="card" style={{ overflow: 'hidden' }}>
-            <table className="tbl"><thead><tr><th>Mã / Thiết bị</th><th>Loại</th><th>Nguồn gốc</th><th>Vị trí hiện tại</th><th>Người vận hành</th><th className="num">Giờ máy / Km</th><th>Trạng thái</th><th></th></tr></thead>
+            <table className="tbl"><thead><tr><th>Mã / Thiết bị</th><th>Loại hình</th><th>Nhóm</th><th>Nguồn gốc</th><th>Vị trí hiện tại</th><th>Người vận hành</th><th className="num">Giờ máy / Km</th><th>Trạng thái</th><th></th></tr></thead>
               <tbody>{list.map(e => (
                 <tr key={e.id} className="clickable" onClick={() => go({ page: 'kho-thiet-bi', sub: 'detail', id: e.id })}>
                   <td><div style={{ display: 'flex', alignItems: 'center', gap: 9 }}><span style={{ width: 28, height: 28, borderRadius: 7, background: e.kind === 'vehicle' ? 'var(--orange-50)' : 'var(--blue-50)', color: e.kind === 'vehicle' ? 'var(--orange-600)' : 'var(--blue-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={e.kind === 'vehicle' ? 'truck' : 'excavator'} size={15} /></span><div><div style={{ fontWeight: 600, fontSize: 12.5 }}>{e.name}</div><div className="mono" style={{ fontSize: 10, color: 'var(--ink-500)' }}>{e.code}</div></div></div></td>
-                  <td><span className="badge badge-gray">{e.cat}</span></td>
+                  <td><span className={'badge ' + (e.kind === 'machine' ? 'badge-violet' : 'badge-blue')}>{e.kind === 'machine' ? 'Máy' : 'Xe'}</span></td>
+                  <td><span className="badge badge-gray">{DB.equipGroupLabel(e.group)}</span></td>
                   <td><Badge map={OWN_ST} k={e.own} /></td>
                   <td style={{ fontSize: 12 }}>{e.locName}</td>
                   <td style={{ fontSize: 12 }}>{e.driver ? DB.byId[e.driver].name : '—'}</td>
@@ -105,18 +122,27 @@
   function KhoVatTu({ go }) {
     const [tab, setTab] = useState('all');
     const [create, setCreate] = useState(false);
-    const list = DB.materials.filter(m => tab === 'all' || m.type === tab);
+    const [q, setQ] = useState('');
+    const [fWh, setFWh] = useState('all');
+    const list = DB.materials.filter(m => (tab === 'all' || m.type === tab) && (fWh === 'all' || m.wh === fWh) && (!q || m.name.toLowerCase().includes(q.toLowerCase()) || m.code.toLowerCase().includes(q.toLowerCase())));
+    const catCount = (id) => DB.materials.filter(m => m.type === id).length;
     return (
       <Page go={go} title="Vật tư" label="Vật tư" right={<button className="btn btn-sm btn-primary" onClick={() => setCreate(true)}><Icon name="plus" size={14} />Tạo vật tư</button>}>
-        <div style={{ marginBottom: 14 }}><Tabs tabs={[{ id: 'all', label: 'Tất cả', count: DB.materials.length }, { id: 'nvl', label: 'Nguyên vật liệu', count: DB.materials.filter(m => m.type === 'nvl').length }, { id: 'nl', label: 'Nhiên liệu', count: DB.materials.filter(m => m.type === 'nl').length }]} active={tab} onChange={setTab} /></div>
+        <div style={{ marginBottom: 14 }}><Tabs tabs={[{ id: 'all', label: 'Tất cả', count: DB.materials.length }, ...DB.matCats.map(c => ({ id: c.id, label: c.name, icon: c.icon, count: catCount(c.id) }))]} active={tab} onChange={setTab} scroll /></div>
+        <div className="card" style={{ padding: 12, marginBottom: 12, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Search placeholder="Tìm mã / tên vật tư…" value={q} onChange={setQ} w={220} />
+          <select className="select" style={{ height: 32, width: 'auto', minWidth: 150 }} value={fWh} onChange={e => setFWh(e.target.value)}><option value="all">Tất cả kho</option>{DB.warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}</select>
+          <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--ink-500)' }}>{list.length} vật tư</span>
+        </div>
         <div className="card" style={{ overflow: 'hidden' }}>
-          <table className="tbl"><thead><tr><th>Mã / Vật tư</th><th>Loại</th><th>Quy cách</th><th>ĐV</th><th className="num">Tồn kho</th><th className="num">Mức tối thiểu</th><th className="num">Đơn giá</th><th>Cảnh báo</th></tr></thead>
-            <tbody>{list.map(m => { const low = m.stock <= m.min; return (
+          <table className="tbl"><thead><tr><th>Mã / Vật tư</th><th>Nhóm</th><th>Quy cách</th><th>ĐV</th><th>Kho</th><th className="num">Tồn kho</th><th className="num">Mức tối thiểu</th><th className="num">Đơn giá</th><th>Cảnh báo</th></tr></thead>
+            <tbody>{list.map(m => { const low = m.stock <= m.min; const cls = { nvl: 'badge-teal', nl: 'badge-orange', phu: 'badge-blue', phutung: 'badge-violet' }[m.type] || 'badge-gray'; return (
               <tr key={m.id} className="clickable">
                 <td><div style={{ fontWeight: 600, fontSize: 12.5 }}>{m.name}</div><div className="mono" style={{ fontSize: 10, color: 'var(--ink-500)' }}>{m.code}</div></td>
-                <td><span className={'badge ' + (m.type === 'nl' ? 'badge-orange' : 'badge-teal')}>{m.type === 'nl' ? 'Nhiên liệu' : 'Nguyên vật liệu'}</span></td>
+                <td><span className={'badge ' + cls}>{DB.matCatLabel(m.type)}</span></td>
                 <td style={{ fontSize: 12 }}>{m.spec}</td>
                 <td>{m.unit}</td>
+                <td style={{ fontSize: 11.5 }}>{(DB.warehouses.find(w => w.id === m.wh) || {}).name || '—'}</td>
                 <td className="num"><b>{nf(m.stock, m.stock < 100 ? 1 : 0)}</b></td>
                 <td className="num muted">{nf(m.min)}</td>
                 <td className="num">{m.price >= 1 ? nf(m.price) + ' tr' : nf(m.price * 1000) + 'k'}</td>

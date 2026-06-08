@@ -23,10 +23,10 @@
     // project detail tab ids
     tabs: {
       pm: ['*'],
-      site: ['tong-quan', 'cong-viec', 'tien-do', 'khu-vuc', 'nhat-ky', 'vat-lieu-do', 'thiet-bi', 'ton-kho', 'nhan-su', 'tai-chinh', 'bao-cao', 'ho-so'],
-      watch: ['tong-quan', 'cong-viec', 'tien-do', 'khu-vuc', 'nhat-ky', 'vat-lieu-do', 'thiet-bi', 'ton-kho', 'nhan-su', 'goi-thau', 'tai-chinh', 'bao-cao', 'ho-so'],
+      site: ['tong-quan', 'cong-viec', 'tien-do', 'khu-vuc', 'nhat-ky', 'vat-lieu-do', 'thiet-bi', 'ton-kho', 'nhan-su', 'tai-chinh', 'bao-cao', 'canh-bao', 'ho-so'],
+      watch: ['tong-quan', 'cong-viec', 'tien-do', 'khu-vuc', 'nhat-ky', 'vat-lieu-do', 'thiet-bi', 'ton-kho', 'nhan-su', 'goi-thau', 'tai-chinh', 'bao-cao', 'canh-bao', 'ho-so'],
       exec: ['tong-quan', 'vat-lieu-do', 'thiet-bi', 'ton-kho', 'ho-so'],
-      kt: ['tong-quan', 'cong-viec', 'tien-do', 'khu-vuc', 'nhat-ky', 'ho-so'],
+      kt: ['tong-quan', 'cong-viec', 'tien-do', 'khu-vuc', 'nhat-ky', 'canh-bao', 'ho-so'],
       wh: ['tong-quan', 'thiet-bi', 'ton-kho', 'vat-lieu-do', 'ho-so'],
       acc: ['tong-quan', 'goi-thau', 'tai-chinh', 'nhan-su', 'bao-cao', 'ho-so'],
     },

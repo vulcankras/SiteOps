@@ -17,6 +17,7 @@
     { id: 'goi-thau', label: 'Gói thầu', icon: 'file', roles: ['pm', 'watch'] },
     { id: 'tai-chinh', label: 'Tài chính', icon: 'wallet', roles: ['pm', 'site', 'watch'] },
     { id: 'bao-cao', label: 'Báo cáo', icon: 'report' },
+    { id: 'canh-bao', label: 'Cảnh báo', icon: 'alert' },
     { id: 'ho-so', label: 'Hồ sơ - Tài liệu', icon: 'folder' },
   ];
 
@@ -171,6 +172,9 @@
         ) : (
           <div className="card ph" style={{ height: 200, flexDirection: 'column', gap: 10 }}><Icon name="map-pin" size={26} /><div>Chưa thiết lập khu vực thi công cho dự án này</div><button className="btn btn-sm" onClick={() => go({ page: 'cong-truong', sub: 'detail', id: p.id, tab: 'khu-vuc' })}><Icon name="plus" size={13} />Thêm khu vực</button></div>
         )}
+
+        {/* cảnh báo công trường (gọn) */}
+        {window.SiteAlerts && <window.SiteAlerts p={p} go={go} onTab={(t) => go({ page: 'cong-truong', sub: 'detail', id: p.id, tab: t })} compact />}
 
         {/* lower row */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, alignItems: 'start' }}>
@@ -406,7 +410,7 @@
           </aside>}
           <div className="grow" style={{ minWidth: 0, padding: '18px 22px 60px', borderLeft: (!siteScoped && navStyle === 'left') ? '1px solid var(--line)' : 'none' }}>
             {tab === 'tong-quan' && (siteScoped && window.SiteRoleDash && ['site', 'kt', 'exec'].includes(role) ? <window.SiteRoleDash role={role} p={p} go={go} /> : <Overview p={p} go={go} />)}
-            {tab !== 'tong-quan' && window.CTTabs && <window.CTTabs tab={tab} p={p} role={role} go={go} />}
+            {tab !== 'tong-quan' && window.CTTabs && <window.CTTabs tab={tab} p={p} role={role} go={go} onTab={setTab} />}
           </div>
         </div>
         {modal === 'config' && <ProjectConfig p={p} tpl={tpl} onClose={() => setModal(null)} />}
