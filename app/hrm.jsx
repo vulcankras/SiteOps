@@ -13,6 +13,7 @@
   ];
   const PERSON_PROJ = { u1: 'office', u2: 'office', u3: 'p1', u4: 'p1', u5: 'p1', u6: 'p1', u7: 'p2', u8: 'p1', u9: 'office', u10: 'p1', u11: 'office', u12: 'office' };
   const siteOf = (id) => SITES.find(s => s.id === (PERSON_PROJ[id] || 'office'));
+  const isOutsourced = (id) => !!(DB.outsourcedInfo && DB.outsourcedInfo[id]) || (DB.projectStaff || []).some(s => s.person === id && s.staffType === 'outsourced');
   const SiteTag = ({ pid }) => { const s = siteOf(pid); return <span className="badge badge-sq" style={{ background: s.color + '1a', color: s.color, fontSize: 10.5 }}>{s.short}</span>; };
 
   /* ---- hồ sơ chi tiết (sinh theo bộ phận) ---- */
@@ -211,17 +212,18 @@
       <Page go={go} title="Hồ sơ nhân sự" label="Hồ sơ nhân sự" right={<button className="btn btn-sm btn-primary"><Icon name="plus" size={14} />Thêm nhân sự</button>}>
         <div style={{ marginBottom: 12 }}><SiteFilter scope={scope} value={site} onChange={setSite} /></div>
         <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)', marginBottom: 14 }}>
-          <Stat label="Tổng nhân sự" icon="users" value={list.length} unit="người" edge="var(--blue-500)" />
+          <Stat label="Cơ hữu / Thuê ngoài" icon="users" value={list.filter(p => !isOutsourced(p.id)).length} unit={'/ ' + list.filter(p => isOutsourced(p.id)).length + ' thuê'} edge="var(--blue-500)" />
           <Stat label="Tại công trường" icon="road" value={list.filter(p => PERSON_PROJ[p.id] !== 'office').length} edge="var(--orange-500)" />
           <Stat label="Khối văn phòng" icon="building" value={list.filter(p => PERSON_PROJ[p.id] === 'office').length} edge="var(--violet-500)" />
           <Stat label="HĐ không thời hạn" icon="shield-check" value={list.filter(p => hrDetail(p).contract.startsWith('Không')).length} edge="var(--green-500)" />
         </div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}><Search placeholder="Tìm tên / chức vụ…" value={q} onChange={setQ} w={240} /><button className="chip"><Icon name="filter" size={13} />Bộ phận</button></div>
         <div className="card" style={{ overflow: 'hidden' }}>
-          <table className="tbl"><thead><tr><th>Nhân sự</th><th>Chức vụ</th><th>Bộ phận</th>{company && <th>Công trường</th>}<th>Điện thoại</th><th>Hợp đồng</th><th></th></tr></thead>
-            <tbody>{list.map(p => { const d = hrDetail(p); return (
+          <table className="tbl"><thead><tr><th>Nhân sự</th><th>Loại</th><th>Chức vụ</th><th>Bộ phận</th>{company && <th>Công trường</th>}<th>Điện thoại</th><th>Hợp đồng</th><th></th></tr></thead>
+            <tbody>{list.map(p => { const d = hrDetail(p); const out = isOutsourced(p.id); return (
               <tr key={p.id} className="clickable" onClick={() => setSel(p)}>
                 <td><div style={{ display: 'flex', alignItems: 'center', gap: 9 }}><Avatar id={p.id} /><div><div style={{ fontWeight: 600, fontSize: 12.5 }}>{p.name}</div><div className="mono" style={{ fontSize: 10, color: 'var(--ink-500)' }}>NV-{p.id.slice(1).padStart(3, '0')}</div></div></div></td>
+                <td>{out ? <span className="badge badge-orange"><Icon name="partner" size={10} />Thuê ngoài</span> : <span className="badge badge-blue"><Icon name="customer" size={10} />Cơ hữu</span>}</td>
                 <td>{p.title}</td>
                 <td className="muted" style={{ fontSize: 12 }}>{p.dept}</td>
                 {company && <td><SiteTag pid={p.id} /></td>}
@@ -232,7 +234,7 @@
             ); })}</tbody>
           </table>
         </div>
-        {sel && <EmpDetail p={sel} onClose={() => setSel(null)} />}
+        {sel && (window.PersonDetail ? <window.PersonDetail pid={sel.id} onClose={() => setSel(null)} /> : <EmpDetail p={sel} onClose={() => setSel(null)} />)}
       </Page>
     );
   }

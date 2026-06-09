@@ -162,4 +162,103 @@
     return id;
   }
   DB.locName = locName;
+
+  /* ===== 10. Lịch sử quét QR đếm chuyến — từng lượt quét ===== */
+  // Đăng ký xe theo biển số (gồm xe nội bộ + xe thuê CTY 568)
+  const PLATE_REG = {
+    '29C-15653': { name: 'Xe điều phối 568', series: 'DP-568-2022', driver: 'Lý Văn Phúc', vol: 20 },
+    '29C-02617': { name: 'Xe ben 568 - 02', series: 'BEN-568-02', driver: 'Nông Văn Đại', vol: 20 },
+    '29C-15618': { name: 'Xe ben 568 - 03', series: 'BEN-568-03', driver: 'Hoàng Văn Tỉnh', vol: 20 },
+    '29C-15678': { name: 'Xe ben 568 - 04', series: 'BEN-568-04', driver: 'Vi Văn Thành', vol: 20 },
+    '29C-15605': { name: 'Xe ben 568 - 05', series: 'BEN-568-05', driver: 'Lương Văn Sỹ', vol: 20 },
+    '29C-15501': { name: 'Xe ben 568 - 06', series: 'BEN-568-06', driver: 'Triệu Văn Quý', vol: 20 },
+    '29C-15655': { name: 'Xe ben 568 - 07', series: 'BEN-568-07', driver: 'Bế Văn Hoàn', vol: 20 },
+    '29C-15621': { name: 'Xe ben 568 - 08', series: 'BEN-568-08', driver: 'Đàm Văn Lực', vol: 20 },
+    '29H-21544': { name: 'Xe Howo 4 chân (Xe 44)', series: 'HOWO-44-2021', driver: 'Bùi Văn Khoa', vol: 12, equip: 'e5' },
+    '29H-21557': { name: 'Xe Howo 3 chân (Xe 57)', series: 'HOWO-57-2021', driver: 'Bùi Văn Khoa', vol: 10, equip: 'e6' },
+  };
+  DB.plateReg = PLATE_REG;
+  const SCANNERS = ['u8', 'u5']; // cán bộ vật tư / kỹ thuật trực điểm đổ
+  // sinh từng lượt quét từ drops (mỗi chuyến = 1 lượt quét)
+  function addMin(hhmm, mins) {
+    let [h, m] = hhmm.split(':').map(Number); m += mins; h += Math.floor(m / 60); m = m % 60;
+    return String(h % 24).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+  }
+  const qrScans = [];
+  let sid = 1;
+  DB.drops.forEach(d => {
+    const reg = PLATE_REG[d.plate] || { name: d.plate, series: '—', driver: '—', vol: d.vol / d.trips };
+    const per = +(d.vol / d.trips).toFixed(1);
+    for (let i = 0; i < d.trips; i++) {
+      qrScans.push({
+        id: 'qr' + (sid++), date: d.date, time: addMin(d.time, i * 7),
+        plate: d.plate, equip: reg.equip || null, name: reg.name, series: reg.series,
+        driver: reg.driver, scanner: SCANNERS[(sid) % SCANNERS.length], vol: per,
+        work: d.work, gps: 'Km7+' + (200 + i * 5),
+      });
+    }
+  });
+  // thêm vài lượt của xe Howo nội bộ (đổ tại bãi)
+  ['29H-21544', '29H-21557'].forEach((pl, k) => {
+    const reg = PLATE_REG[pl];
+    for (let i = 0; i < (k === 0 ? 6 : 5); i++) qrScans.push({ id: 'qr' + (sid++), date: '2026-05-16', time: addMin('07:50', i * 23 + k * 11), plate: pl, equip: reg.equip, name: reg.name, series: reg.series, driver: reg.driver, scanner: 'u5', vol: reg.vol, work: 'Vận chuyển đất đắp K95', gps: 'Km4+' + (500 + i * 20) });
+  });
+  qrScans.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  DB.qrScans = qrScans;
+
+  // báo cáo ngày của 1 thiết bị (gộp theo biển + ngày)
+  DB.qrDailyByPlate = function (date) {
+    const map = {};
+    DB.qrScans.filter(s => !date || s.date === date).forEach(s => {
+      const key = s.date + '|' + s.plate;
+      if (!map[key]) map[key] = { date: s.date, plate: s.plate, name: s.name, series: s.series, driver: s.driver, equip: s.equip, trips: 0, vol: 0, first: s.time, last: s.time };
+      const r = map[key]; r.trips++; r.vol += s.vol; if (s.time < r.first) r.first = s.time; if (s.time > r.last) r.last = s.time;
+    });
+    return Object.values(map).sort((a, b) => b.trips - a.trips);
+  };
+
+  /* ===== 11. Nhân sự thuê ngoài — hợp đồng, người quản lý, lương trả ===== */
+  // mỗi nhân sự thuê ngoài (theo person trong projectStaff staffType=outsourced)
+  DB.outsourcedInfo = {
+    u11: {
+      supplierType: 'company', supplier: 'pt5', // nhà cung cấp nhân lực
+      manager: 'u4',           // ai quản lý (chỉ huy / đội trưởng)
+      contractNo: 'HĐNL-2026-018', contractFrom: '2026-05-01', contractTo: '2026-05-31',
+      payForm: 'trip',         // theo chuyến
+      rate: 0.18, rateUnit: 'chuyến',
+      account: false,          // không có tài khoản hệ thống
+      idCard: '024090001234', birth: 1990, home: 'Cao Lộc, Lạng Sơn', phone: '0935 778 220',
+    },
+  };
+  // hợp đồng cung cấp nhân lực (cấp tổ/đội)
+  DB.laborContracts = [
+    { id: 'LC1', supplier: 'pt5', no: 'HĐNL-2026-018', team: 'vantai-thue', proj: 'p1', from: '2026-05-01', to: '2026-05-31', count: 4, payForm: 'trip', rate: 0.18, value: 95, status: 'active', manager: 'u4' },
+    { id: 'LC2', supplier: 'pt5', no: 'HĐNL-2026-011', team: 'caulao-thue', proj: 'p1', from: '2026-04-01', to: '2026-06-30', count: 18, payForm: 'day', rate: 0.42, value: 412, status: 'active', manager: 'u4' },
+  ];
+  // bảng lương trả cho nhân sự thuê ngoài (theo tháng)
+  DB.outsourcedPay = {
+    u11: [
+      { month: '05/2026', trips: 51, rate: 0.18, gross: 9.18, advance: 4.0, net: 5.18, status: 'pending', payTo: 'supplier' },
+      { month: '04/2026', trips: 62, rate: 0.18, gross: 11.16, advance: 5.0, net: 6.16, status: 'paid', payTo: 'supplier' },
+    ],
+  };
+  // timesheet thuê ngoài (chấm công theo ngày — đơn giản)
+  DB.outsourcedTimesheet = {
+    u11: [
+      { date: '2026-05-16', in: '06:50', out: '17:20', trips: 8, status: 'ok' },
+      { date: '2026-05-15', in: '06:55', out: '17:10', trips: 9, status: 'ok' },
+      { date: '2026-05-14', in: '07:10', out: '16:40', trips: 7, status: 'late' },
+      { date: '2026-05-13', in: '—', out: '—', trips: 0, status: 'off' },
+      { date: '2026-05-12', in: '06:48', out: '17:30', trips: 10, status: 'ok' },
+    ],
+  };
+
+  /* ===== 12. Lịch sử lương nhân sự cơ hữu (theo tháng) ===== */
+  DB.payHistory = {
+    u3: [{ month: '04/2026', cong: 26, caMay: 18, base: 12, ot: 2.4, gross: 16.8, net: 15.2, status: 'paid' }, { month: '03/2026', cong: 25, caMay: 16, base: 12, ot: 1.8, gross: 15.9, net: 14.4, status: 'paid' }, { month: '02/2026', cong: 22, caMay: 14, base: 12, ot: 1.2, gross: 14.1, net: 12.9, status: 'paid' }],
+    u6: [{ month: '04/2026', cong: 27, caMay: 20, base: 10.5, ot: 3.1, gross: 15.6, net: 14.1, status: 'paid' }, { month: '03/2026', cong: 26, caMay: 18, base: 10.5, ot: 2.5, gross: 14.8, net: 13.5, status: 'paid' }],
+    u7: [{ month: '04/2026', cong: 25, caMay: 17, base: 10.5, ot: 2.0, gross: 14.2, net: 12.9, status: 'paid' }],
+    u10: [{ month: '04/2026', cong: 26, caMay: 0, base: 11, ot: 2.8, gross: 15.4, net: 14.0, status: 'paid' }],
+  };
+  DB.supplierName = (id) => (DB.partners.find(x => x.id === id) || {}).name || id;
 })();

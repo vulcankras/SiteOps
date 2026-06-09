@@ -70,6 +70,7 @@
           { id: 'ca-may', label: 'Ca máy', icon: 'excavator' },
           { id: 'nhien-lieu', label: 'Nhiên liệu', icon: 'droplet' },
           { id: 'doi-soat', label: 'Đối soát QR', icon: 'scan' },
+          { id: 'lich-su-quet', label: 'Lịch sử quét QR', icon: 'qr' },
         ]} /></div>
         {FilterBar}
 
@@ -188,6 +189,7 @@
 
         {/* ---- Đối soát QR vs khai báo ---- */}
         {tab === 'doi-soat' && <DoiSoatQR p={p} />}
+        {tab === 'lich-su-quet' && <LichSuQuet p={p} fEquip={fEquip} />}
       </div>
     );
   }
@@ -439,6 +441,7 @@
   function SiteNhanSu({ p, go }) {
     const [fType, setFType] = useState('all');
     const [fTeam, setFTeam] = useState('all');
+    const [sel, setSel] = useState(null);
     const staff = DB.projectStaff.filter(s => s.proj === p.id);
     const list = staff.filter(s => (fType === 'all' || s.staffType === fType) && (fTeam === 'all' || s.team === fTeam));
     const crews = DB.outsourcedCrews.filter(c => c.proj === p.id);
@@ -470,7 +473,7 @@
         <Card title="Danh sách nhân sự (có hồ sơ)" icon="users" scroll>
           <table className="tbl"><thead><tr><th>Nhân sự</th><th>Loại</th><th>Tổ / Đội</th><th>Vai trò trong dự án</th><th>Khu vực</th><th>Thiết bị vận hành</th><th>Hôm nay</th></tr></thead>
             <tbody>{list.map(s => { const pr = DB.byId[s.person]; const t = ts(s.person); const eq = s.equip ? DB.equipment.find(x => x.id === s.equip) : null; const area = s.area ? DB.areas.find(a => a.id === s.area) : null; return (
-              <tr key={s.person}>
+              <tr key={s.person} className="clickable" onClick={() => setSel(s)}>
                 <td><div style={{ display: 'flex', alignItems: 'center', gap: 9 }}><Avatar id={s.person} size="av-sm" /><div><div style={{ fontWeight: 600, fontSize: 12.5 }}>{pr.name}{s.lead && <span className="badge badge-blue" style={{ marginLeft: 6, fontSize: 9.5 }}>Tổ trưởng</span>}</div><div className="muted" style={{ fontSize: 10.5 }}>{pr.phone}</div></div></div></td>
                 <td>{s.staffType === 'company' ? <span className="badge badge-blue">Công ty</span> : <span className="badge badge-orange">Thuê ngoài</span>}</td>
                 <td style={{ fontSize: 12 }}>{DB.teamName(s.team)}</td>
@@ -499,6 +502,7 @@
             </table>
           </Card>
         </div>}
+        {sel && window.PersonDetail && <window.PersonDetail pid={sel.person} staff={sel} onClose={() => setSel(null)} />}
       </div>
     );
   }
@@ -578,6 +582,90 @@
             ))}</div>
           </div>;
         })}
+      </div>
+    );
+  }
+
+  /* ---- Lịch sử quét QR đếm chuyến ---- */
+  function LichSuQuet({ p, fEquip }) {
+    const [view, setView] = useState('scan');   // scan | daily
+    const [q, setQ] = useState('');
+    const [date, setDate] = useState('2026-05-16');
+    const plateOf = (eid) => { const e = DB.equipment.find(x => x.id === eid); return e ? e.plate : null; };
+    const fPlate = fEquip !== 'all' ? plateOf(fEquip) : null;
+
+    const scans = DB.qrScans.filter(s => s.date === date && (!fPlate || s.plate === fPlate) && (!q || s.plate.includes(q) || s.name.toLowerCase().includes(q.toLowerCase()) || (s.driver || '').toLowerCase().includes(q.toLowerCase())));
+    const daily = DB.qrDailyByPlate(date).filter(r => (!fPlate || r.plate === fPlate) && (!q || r.plate.includes(q) || r.name.toLowerCase().includes(q.toLowerCase()) || (r.driver || '').toLowerCase().includes(q.toLowerCase())));
+
+    return (
+      <div>
+        <div className="auto-note" style={{ marginTop: 0, marginBottom: 14 }}><Icon name="qr" size={13} />Mỗi lượt quét QR tại điểm đổ = 1 chuyến, ghi nhận tự động: giờ/ngày quét, xe, người lái, người quét, khối lượng. Báo cáo ngày gộp theo từng xe.</div>
+        <div className="card" style={{ padding: 12, marginBottom: 14, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="seg">
+            <button className={view === 'scan' ? 'active' : ''} onClick={() => setView('scan')}><Icon name="list" size={14} />Lịch sử quét</button>
+            <button className={view === 'daily' ? 'active' : ''} onClick={() => setView('daily')}><Icon name="report" size={14} />Báo cáo ngày / xe</button>
+          </div>
+          <input className="input" type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: 150, height: 32 }} />
+          <Search placeholder="Tìm biển số / xe / người lái…" value={q} onChange={setQ} w={220} />
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 7 }}>
+            <button className="btn btn-sm" onClick={() => toast('Đang tạo Excel…')}><Icon name="download" size={14} />Excel</button>
+          </div>
+        </div>
+
+        {view === 'scan' ? <>
+          <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: 14 }}>
+            <Stat label="Tổng lượt quét" icon="scan" value={scans.length} unit="chuyến" edge="var(--blue-500)" />
+            <Stat label="Tổng khối lượng" icon="cube" value={nf(scans.reduce((s, x) => s + x.vol, 0))} unit="m³" edge="var(--green-500)" />
+            <Stat label="Số xe tham gia" icon="truck" value={new Set(scans.map(s => s.plate)).size} unit="xe" edge="var(--orange-500)" />
+          </div>
+          <Card title={'Lịch sử quét QR — ngày ' + dmy(date)} icon="qr" color="var(--blue-600)" scroll>
+            <table className="tbl tbl-compact" style={{ minWidth: 1000, whiteSpace: 'nowrap' }}>
+              <thead><tr><th>#</th><th>Giờ quét</th><th>Ngày</th><th>Tên xe</th><th>Series xe</th><th>Biển số</th><th>Người lái</th><th>Người quét</th><th>Vị trí (GPS)</th><th className="num">Khối lượng</th></tr></thead>
+              <tbody>{scans.map((s, i) => (
+                <tr key={s.id}>
+                  <td className="muted mono">{i + 1}</td>
+                  <td className="mono"><b>{s.time}</b></td>
+                  <td className="mono" style={{ fontSize: 11.5 }}>{dmy(s.date)}</td>
+                  <td style={{ fontWeight: 600 }}>{s.name}</td>
+                  <td className="mono" style={{ fontSize: 11 }}>{s.series}</td>
+                  <td className="mono">{s.plate}</td>
+                  <td style={{ fontSize: 12 }}>{s.driver}</td>
+                  <td style={{ fontSize: 12 }}>{drv(s.scanner)}</td>
+                  <td className="mono" style={{ fontSize: 11 }}>{s.gps}</td>
+                  <td className="num"><b>{nf(s.vol, 1)} m³</b></td>
+                </tr>
+              ))}
+                {!scans.length && <tr><td colSpan={10} style={{ textAlign: 'center', padding: 24, color: 'var(--ink-400)' }}>Không có lượt quét nào</td></tr>}
+              </tbody>
+            </table>
+          </Card>
+        </> : <>
+          <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: 14 }}>
+            <Stat label="Số xe" icon="truck" value={daily.length} unit="xe" edge="var(--blue-500)" />
+            <Stat label="Tổng chuyến" icon="refresh" value={daily.reduce((s, r) => s + r.trips, 0)} edge="var(--orange-500)" />
+            <Stat label="Tổng khối lượng" icon="cube" value={nf(daily.reduce((s, r) => s + r.vol, 0))} unit="m³" edge="var(--green-500)" />
+          </div>
+          <Card title={'Báo cáo ngày theo xe — ' + dmy(date)} icon="report" color="var(--green-600)" scroll>
+            <table className="tbl tbl-compact" style={{ minWidth: 900, whiteSpace: 'nowrap' }}>
+              <thead><tr><th>Ngày</th><th>Tên xe</th><th>Series xe</th><th>Biển số</th><th>Người lái</th><th className="num">Chuyến đầu</th><th className="num">Chuyến cuối</th><th className="num">Tổng số chuyến</th><th className="num">Tổng khối</th></tr></thead>
+              <tbody>{daily.map((r, i) => (
+                <tr key={i} className={r.equip ? 'clickable' : ''}>
+                  <td className="mono" style={{ fontSize: 11.5 }}>{dmy(r.date)}</td>
+                  <td style={{ fontWeight: 600 }}>{r.name}</td>
+                  <td className="mono" style={{ fontSize: 11 }}>{r.series}</td>
+                  <td className="mono">{r.plate}</td>
+                  <td style={{ fontSize: 12 }}>{r.driver}</td>
+                  <td className="num mono">{r.first}</td>
+                  <td className="num mono">{r.last}</td>
+                  <td className="num"><b style={{ color: 'var(--orange-600)' }}>{r.trips}</b></td>
+                  <td className="num"><b style={{ color: 'var(--green-700)' }}>{nf(r.vol)} m³</b></td>
+                </tr>
+              ))}
+                <tr style={{ background: 'var(--surface-2)', fontWeight: 700 }}><td colSpan={7}>Tổng cộng — {daily.length} xe</td><td className="num" style={{ color: 'var(--orange-600)' }}>{daily.reduce((s, r) => s + r.trips, 0)}</td><td className="num" style={{ color: 'var(--green-700)' }}>{nf(daily.reduce((s, r) => s + r.vol, 0))} m³</td></tr>
+              </tbody>
+            </table>
+          </Card>
+        </>}
       </div>
     );
   }
